@@ -1,0 +1,1000 @@
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { UserRepository } from 'src/modules/repository/services/user.repository';
+import { In } from 'typeorm';
+
+import { RoleUserEnum } from '../../../database/entities/enums/role.enum';
+import { RatingVenueEntity } from '../../../database/entities/rating-venue.entity';
+import { TagEntity } from '../../../database/entities/tag.entity';
+import { TopCategoryEntity } from '../../../database/entities/top-category.entity';
+import { IUserData } from '../../auth/interfaces/user-data.interface';
+import { CommentResDto } from '../../comments/dto/res/comment.res.dto';
+import { CommentMapper } from '../../comments/services/comment.mapper';
+import { AppSettingRepository } from '../../repository/services/app-setting.repository';
+import { CommentRepository } from '../../repository/services/comment.repository';
+import { ComplaintRepository } from '../../repository/services/complaint.repository';
+import { RatingVenueRepository } from '../../repository/services/rating-venue.repository';
+import { TagRepository } from '../../repository/services/tag.repository';
+import { TopRepository } from '../../repository/services/top.repository';
+import { VenueRepository } from '../../repository/services/venue.repository';
+import { VenueViewRepository } from '../../repository/services/venue-view.repository';
+import { TopCategoryResDto } from '../../top/dto/res/top-category.res.dto';
+import { TopCategoryWithVenuesResDto } from '../../top/dto/res/top-category-with-venues.res.dto';
+import { UserMapper } from '../../users/services/user.mapper';
+import { VenueListQueryDto } from '../../venue/dto/req/venue-list.query.dto';
+import { ComplaintResDto } from '../../venue/dto/res/complaint.res.dto';
+import { ComplaintListResDto } from '../../venue/dto/res/complaint-list.res.dto';
+import { VenueResDto } from '../../venue/dto/res/venue.res.dto';
+import { VenueListResDto } from '../../venue/dto/res/venue-list.res.dto';
+import { ComplaintMapper } from '../../venue/services/complaint.mapper';
+import { VenueMapper } from '../../venue/services/venue.mapper';
+import { AdminAddVenueToTopCategoryReqDto } from '../dto/req/admin-add-venue-to-top-category.req.dto';
+import { AdminComplaintListQueryDto } from '../dto/req/admin-complaint-list.query.dto';
+import { AdminCreateTopCategoryReqDto } from '../dto/req/admin-create-top-category.req.dto';
+import { AdminReorderTopCategoriesReqDto } from '../dto/req/admin-reorder-top-categories.req.dto';
+import { AdminReorderTopCategoryVenuesReqDto } from '../dto/req/admin-reorder-top-category-venues.req.dto';
+import { AdminUpdateCommentReqDto } from '../dto/req/admin-update-comment.req.dto';
+import { AdminUpdateComplaintStatusReqDto } from '../dto/req/admin-update-complaint-status.req.dto';
+import { AdminUpdateTopCategoryReqDto } from '../dto/req/admin-update-top-category.req.dto';
+import { AdminUpdateUserReqDto } from '../dto/req/admin-update-user.req.dto';
+import { AdminUpdateVenueReqDto } from '../dto/req/admin-update-venue.req.dto';
+import { AdminUserListQueryDto } from '../dto/req/admin-user-list.query.dto.';
+import { AdminUserListResDto } from '../dto/req/admin-user-list.res.dto';
+import { AdminVenueListQueryDto } from '../dto/req/admin-venue-list.query.dto';
+import { AdminVenueViewsQueryDto } from '../dto/req/admin-venue-views.query.dto';
+import {
+  AdminVenueViewsSummaryResDto,
+  AdminVenueViewsTimePointResDto,
+} from '../dto/res/admin-venue-views.res.dto';
+
+@Injectable()
+export class AdminService {
+  constructor(
+    private readonly venueRepository: VenueRepository,
+    private readonly userRepository: UserRepository,
+    private readonly commentRepository: CommentRepository,
+    private readonly appSettingRepository: AppSettingRepository,
+    private readonly venueViewRepository: VenueViewRepository,
+    private readonly ratingVenueRepository: RatingVenueRepository,
+    private readonly tagRepository: TagRepository,
+    private readonly complaintRepository: ComplaintRepository,
+    private readonly topRepository: TopRepository,
+  ) {}
+
+  private assertSuperAdmin(userData: IUserData): void {
+    const roles = userData.roles ?? [];
+    if (!roles.includes(RoleUserEnum.SUPERADMIN)) {
+      throw new ForbiddenException('Only SUPERADMIN can access this endpoint');
+    }
+  }
+
+  public async getPendingVenues(
+    userData: IUserData,
+    query: VenueListQueryDto,
+  ): Promise<VenueListResDto> {
+    this.assertSuperAdmin(userData);
+
+    const qb = this.venueRepository.createQueryBuilder('venue');
+
+    qb.leftJoinAndSelect('venue.tags', 'tag');
+    qb.leftJoinAndSelect('venue.user', 'user');
+    qb.leftJoinAndSelect('venue.likes', 'like', 'like.user_id = :userId');
+    qb.leftJoinAndSelect(
+      'user.followings',
+      'following',
+      'following.follower_id = :userId',
+    );
+    qb.setParameter('userId', userData.userId);
+
+    qb.andWhere('venue.isModerated = false');
+
+    if (query.search) {
+      qb.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qb.setParameter('search', `%${query.search}%`);
+    }
+
+    if (query.tag) {
+      qb.andWhere('tag.name = :tag');
+      qb.setParameter('tag', query.tag);
+    }
+
+    qb.orderBy('venue.created', 'DESC');
+    qb.take(query.limit);
+    qb.skip(query.offset);
+
+    const [entities, total] = await qb.getManyAndCount();
+
+    return VenueMapper.toResponseListDTO(entities, total, query);
+  }
+
+  public async getAllVenues(
+    userData: IUserData,
+    query: AdminVenueListQueryDto,
+  ): Promise<VenueListResDto> {
+    this.assertSuperAdmin(userData);
+
+    const qb = this.venueRepository.createQueryBuilder('venue');
+
+    qb.leftJoinAndSelect('venue.tags', 'tag');
+    qb.leftJoinAndSelect('venue.user', 'user');
+    qb.leftJoinAndSelect('venue.likes', 'like', 'like.user_id = :userId');
+    qb.leftJoinAndSelect(
+      'user.followings',
+      'following',
+      'following.follower_id = :userId',
+    );
+    qb.setParameter('userId', userData.userId);
+
+    const ratingAvgSub = qb
+      .subQuery()
+      .select('COALESCE(AVG(rv.rating), 0)')
+      .from(RatingVenueEntity, 'rv')
+      .where('rv.venue_id = venue.id')
+      .getQuery();
+
+    const ratingCountSub = qb
+      .subQuery()
+      .select('COUNT(rv2.id)')
+      .from(RatingVenueEntity, 'rv2')
+      .where('rv2.venue_id = venue.id')
+      .getQuery();
+
+    qb.addSelect(`(${ratingAvgSub})`, 'ratingAvg');
+    qb.addSelect(`(${ratingCountSub})`, 'ratingCount');
+
+    if (typeof query.isModerated === 'boolean') {
+      qb.andWhere('venue.isModerated = :isModerated', {
+        isModerated: query.isModerated,
+      });
+    }
+
+    if (typeof query.isActive === 'boolean') {
+      qb.andWhere('venue.isActive = :isActive', { isActive: query.isActive });
+    }
+
+    if (query.search) {
+      qb.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qb.setParameter('search', `%${query.search}%`);
+    }
+
+    if (query.tag) {
+      qb.andWhere('tag.name = :tag');
+      qb.setParameter('tag', query.tag);
+    }
+
+    qb.orderBy('venue.created', 'DESC');
+    qb.take(query.limit ?? 10);
+    qb.skip(query.offset ?? 0);
+
+    const total = await qb.getCount();
+    const { entities, raw } = await qb.getRawAndEntities();
+
+    entities.forEach((e, idx) => {
+      (e as any).ratingAvg = raw[idx]?.ratingAvg
+        ? Number(raw[idx].ratingAvg)
+        : 0;
+      (e as any).ratingCount = raw[idx]?.ratingCount
+        ? Number(raw[idx].ratingCount)
+        : 0;
+    });
+
+    return VenueMapper.toResponseListDTO(
+      entities,
+      total,
+
+      {
+        limit: query.limit ?? 10,
+        offset: query.offset ?? 0,
+        search: query.search,
+        tag: query.tag,
+      } as any,
+    );
+  }
+
+  public async approveVenue(
+    userData: IUserData,
+    venueId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id', 'isModerated'],
+    });
+
+    if (!venue) {
+      throw new NotFoundException('Venue not found');
+    }
+
+    if (!venue.isModerated) {
+      await this.venueRepository.update(venueId, { isModerated: true });
+    }
+  }
+
+  public async toggleVenueActive(
+    userData: IUserData,
+    venueId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id', 'isActive'],
+    });
+
+    if (!venue) {
+      throw new NotFoundException('Venue not found');
+    }
+
+    await this.venueRepository.update(venueId, { isActive: !venue.isActive });
+  }
+
+  public async updateVenue(
+    userData: IUserData,
+    venueId: string,
+    dto: AdminUpdateVenueReqDto,
+  ): Promise<VenueResDto> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      relations: ['tags', 'user', 'likes'],
+    });
+
+    if (!venue) {
+      throw new NotFoundException('Venue not found');
+    }
+
+    let tagsEntities: TagEntity[] | undefined = undefined;
+    if (dto.tags) {
+      const names = Array.from(
+        new Set(dto.tags.map((t) => t.trim()).filter(Boolean)),
+      );
+      tagsEntities = [];
+
+      for (const name of names) {
+        const existing = await this.tagRepository.findOne({ where: { name } });
+        if (existing) {
+          tagsEntities.push(existing);
+        } else {
+          const created = await this.tagRepository.save(
+            this.tagRepository.create({ name }),
+          );
+          tagsEntities.push(created);
+        }
+      }
+    }
+
+    const { tags: _tags, ...plain } = dto;
+    void _tags;
+
+    this.venueRepository.merge(venue, plain as any);
+
+    if (tagsEntities) {
+      venue.tags = tagsEntities;
+    }
+
+    const saved = await this.venueRepository.save(venue);
+
+    const full = await this.venueRepository.findOne({
+      where: { id: saved.id },
+      relations: ['tags', 'user', 'likes'],
+    });
+
+    return VenueMapper.toResponseDTO(full);
+  }
+
+  public async deleteVenue(
+    userData: IUserData,
+    venueId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id'],
+    });
+
+    if (!venue) {
+      throw new NotFoundException('Venue not found');
+    }
+
+    await this.venueRepository.delete({ id: venueId });
+  }
+
+  public async getAllUsers(
+    userData: IUserData,
+    query: AdminUserListQueryDto,
+  ): Promise<AdminUserListResDto> {
+    this.assertSuperAdmin(userData);
+
+    const limit = query.limit ?? 10;
+    const offset = query.offset ?? 0;
+
+    const [users, total] = await this.userRepository.getAdminList(
+      limit,
+      offset,
+      query.search,
+    );
+
+    return {
+      data: users.map((u) => UserMapper.toResponseDTO(u)),
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  public async updateUser(
+    userData: IUserData,
+    userId: string,
+    dto: AdminUpdateUserReqDto,
+  ) {
+    this.assertSuperAdmin(userData);
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: [
+        'id',
+        'name',
+        'email',
+        'bio',
+        'image',
+        'role',
+        'created',
+        'updated',
+      ],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (dto.role) {
+      const roles = new Set(dto.role);
+      roles.add(RoleUserEnum.USER);
+      user.role = Array.from(roles);
+    }
+
+    if (dto.name !== undefined) user.name = dto.name;
+    if (dto.bio !== undefined) user.bio = dto.bio;
+    if (dto.image !== undefined) user.image = dto.image;
+
+    const saved = await this.userRepository.save(user);
+    return UserMapper.toResponseDTO(saved);
+  }
+
+  public async deleteUser(userData: IUserData, userId: string): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM likes
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM rating_venue
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM comments
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM refresh_tokens
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM complaints
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM follows
+       WHERE follower_id = $1
+          OR following_id = $2`,
+      [userId, userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM user_favorite_venues
+       WHERE user_id = $1`,
+      [userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM messages
+       WHERE sender_id = $1
+          OR recipient_id = $2`,
+      [userId, userId],
+    );
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM pyachok_request
+       WHERE user_id = $1`,
+      [userId],
+    );
+
+    const venues = await this.userRepository.manager.query(
+      `SELECT id
+       FROM venues
+       WHERE user_id = $1`,
+      [userId],
+    );
+    for (const venue of venues) {
+      const vid = venue.id;
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM likes
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM rating_venue
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM comments
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM complaints
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM user_favorite_venues
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM pyachok_request
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM news
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM venue_views
+         WHERE venue_id = $1`,
+        [vid],
+      );
+      await this.userRepository.manager.query(
+        `DELETE
+         FROM top_category_venues
+         WHERE venue_id = $1`,
+        [vid],
+      );
+    }
+    await this.userRepository.manager.query(
+      `DELETE
+       FROM venues
+       WHERE user_id = $1`,
+      [userId],
+    );
+
+    await this.userRepository.delete({ id: userId });
+  }
+
+  public async reassignVenueOwner(
+    userData: IUserData,
+    venueId: string,
+    newOwnerUserId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id', 'user_id'],
+    });
+
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const newOwner = await this.userRepository.findOne({
+      where: { id: newOwnerUserId },
+      select: ['id'],
+    });
+
+    if (!newOwner) throw new NotFoundException('New owner user not found');
+
+    await this.venueRepository.update(venueId, { user_id: newOwnerUserId });
+  }
+
+  public async getAllComments(
+    userData: IUserData,
+    limit = 20,
+    offset = 0,
+    search?: string,
+  ) {
+    this.assertSuperAdmin(userData);
+    const [items, total] = await this.commentRepository.getAllComments(
+      limit,
+      offset,
+      search,
+    );
+    return {
+      data: items.map((c: any) => ({
+        id: c.id,
+        title: c.title,
+        body: c.body,
+        rating: c.rating,
+        image_check: c.image_check,
+        created: c.created,
+        user: c.user
+          ? { id: c.user.id, name: c.user.name, image: c.user.image }
+          : null,
+        venue: c.venue ? { id: c.venue.id, name: c.venue.name } : null,
+      })),
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  public async updateComment(
+    userData: IUserData,
+    commentId: string,
+    dto: AdminUpdateCommentReqDto,
+  ): Promise<CommentResDto> {
+    this.assertSuperAdmin(userData);
+
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+      relations: ['user'],
+    });
+
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    if (dto.title !== undefined) comment.title = dto.title;
+    if (dto.body !== undefined) comment.body = dto.body;
+    if (dto.rating !== undefined) comment.rating = dto.rating;
+    if (dto.image_check !== undefined)
+      comment.image_check = dto.image_check as any;
+
+    if (dto.recommendation !== undefined) {
+      comment.recommendation = dto.recommendation as any;
+    }
+
+    const saved = await this.commentRepository.save(comment);
+
+    const full = await this.commentRepository.findOne({
+      where: { id: saved.id },
+      relations: ['user'],
+    });
+
+    return CommentMapper.toResponseDTO(userData, full);
+  }
+
+  public async deleteComment(
+    userData: IUserData,
+    commentId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const exists = await this.commentRepository.findOne({
+      where: { id: commentId },
+      select: ['id'],
+    });
+
+    if (!exists) throw new NotFoundException('Comment not found');
+
+    await this.commentRepository.delete({ id: commentId });
+  }
+
+  public async setVenueRatingForUser(
+    userData: IUserData,
+    venueId: string,
+    userId: string,
+    rating: number,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id'],
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const existing = await this.ratingVenueRepository.findOne({
+      where: { user_id: userId, venue_id: venueId },
+      select: ['id', 'user_id', 'venue_id', 'rating'],
+    });
+
+    if (existing) {
+      existing.rating = rating;
+      await this.ratingVenueRepository.save(existing);
+      return;
+    }
+
+    await this.ratingVenueRepository.save(
+      this.ratingVenueRepository.create({
+        user_id: userId,
+        venue_id: venueId,
+        rating,
+      } as RatingVenueEntity),
+    );
+  }
+
+  public async removeVenueRatingForUser(
+    userData: IUserData,
+    venueId: string,
+    userId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id'],
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id'],
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    await this.ratingVenueRepository.delete({
+      user_id: userId,
+      venue_id: venueId,
+    });
+  }
+
+  public async getVenueViewsSummary(
+    userData: IUserData,
+    venueId: string,
+    query: AdminVenueViewsQueryDto,
+  ): Promise<AdminVenueViewsSummaryResDto> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id'],
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    return await this.venueViewRepository.getViewsSummary(
+      venueId,
+      query.fromDate,
+      query.toDate,
+    );
+  }
+
+  public async getVenueViewsTimeSeries(
+    userData: IUserData,
+    venueId: string,
+    query: AdminVenueViewsQueryDto,
+  ): Promise<AdminVenueViewsTimePointResDto[]> {
+    this.assertSuperAdmin(userData);
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: venueId },
+      select: ['id'],
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const bucket = query.bucket ?? 'day';
+
+    const rows = await this.venueViewRepository.getViewsTimeSeries(
+      venueId,
+      bucket,
+      query.fromDate,
+      query.toDate,
+    );
+
+    return rows;
+  }
+
+  public async getCmsSettings(
+    userData: IUserData,
+  ): Promise<Record<string, string>> {
+    this.assertSuperAdmin(userData);
+    return await this.appSettingRepository.getAll();
+  }
+
+  public async updateCmsSettings(
+    userData: IUserData,
+    data: Record<string, string>,
+  ): Promise<Record<string, string>> {
+    this.assertSuperAdmin(userData);
+    await this.appSettingRepository.upsertManySettings(data);
+    return await this.appSettingRepository.getAll();
+  }
+
+  public async getPublicCmsSettings(): Promise<Record<string, string>> {
+    const all = await this.appSettingRepository.getAll();
+    const PUBLIC_KEYS = [
+      'about_text',
+      'about_title',
+      'about_idea',
+      'contact_phone',
+      'contact_email',
+      'contact_address',
+      'social_instagram',
+      'social_facebook',
+      'social_telegram',
+      'warning_age',
+      'warning_safety',
+      'seo_title',
+      'seo_description',
+    ];
+    return Object.fromEntries(
+      Object.entries(all).filter(([k]) => PUBLIC_KEYS.includes(k)),
+    );
+  }
+
+  public async getComplaints(
+    userData: IUserData,
+    query: AdminComplaintListQueryDto,
+  ): Promise<ComplaintListResDto> {
+    this.assertSuperAdmin(userData);
+
+    const [entities, total] =
+      await this.complaintRepository.getAdminList(query);
+
+    return ComplaintMapper.toListResponseDTO(
+      entities,
+      total,
+      query.limit,
+      query.offset,
+    );
+  }
+
+  public async getComplaintById(
+    userData: IUserData,
+    complaintId: string,
+  ): Promise<ComplaintResDto> {
+    this.assertSuperAdmin(userData);
+
+    const entity = await this.complaintRepository.findOne({
+      where: { id: complaintId },
+      relations: { user: true, venue: true },
+    });
+    if (!entity) throw new NotFoundException('Complaint not found');
+
+    return ComplaintMapper.toResponseDTO(entity);
+  }
+
+  public async updateComplaintStatus(
+    userData: IUserData,
+    complaintId: string,
+    dto: AdminUpdateComplaintStatusReqDto,
+  ): Promise<ComplaintResDto> {
+    this.assertSuperAdmin(userData);
+
+    const entity = await this.complaintRepository.findOne({
+      where: { id: complaintId },
+      relations: { user: true, venue: true },
+    });
+    if (!entity) throw new NotFoundException('Complaint not found');
+
+    entity.status = dto.status;
+    const saved = await this.complaintRepository.save(entity);
+
+    return ComplaintMapper.toResponseDTO(saved);
+  }
+
+  public async getTopCategories(
+    userData: IUserData,
+  ): Promise<TopCategoryResDto[]> {
+    this.assertSuperAdmin(userData);
+
+    const categories = await this.topRepository.categories.find({
+      relations: ['items', 'items.venue'],
+      order: { order: 'ASC', created: 'DESC' },
+    });
+    return categories.map((c) => this.mapTopCategory(c));
+  }
+
+  public async createTopCategory(
+    userData: IUserData,
+    dto: AdminCreateTopCategoryReqDto,
+  ): Promise<TopCategoryResDto> {
+    this.assertSuperAdmin(userData);
+
+    const slug = (dto.slug?.trim() || this.slugify(dto.title)).toLowerCase();
+    const entity = this.topRepository.categories.create({
+      title: dto.title.trim(),
+      slug,
+      isActive: dto.isActive ?? true,
+      order: dto.order ?? 0,
+    });
+    const saved = await this.topRepository.categories.save(entity);
+    return this.mapTopCategory(saved);
+  }
+
+  public async updateTopCategory(
+    userData: IUserData,
+    categoryId: string,
+    dto: AdminUpdateTopCategoryReqDto,
+  ): Promise<TopCategoryResDto> {
+    this.assertSuperAdmin(userData);
+
+    const entity = await this.topRepository.getCategoryById(categoryId);
+    if (!entity) throw new NotFoundException('Top category not found');
+
+    if (dto.title !== undefined) entity.title = dto.title.trim();
+    if (dto.slug !== undefined) entity.slug = dto.slug.trim().toLowerCase();
+    if (dto.isActive !== undefined) entity.isActive = dto.isActive;
+    if (dto.order !== undefined) entity.order = dto.order;
+
+    const saved = await this.topRepository.categories.save(entity);
+    return this.mapTopCategory(saved);
+  }
+
+  public async deleteTopCategory(
+    userData: IUserData,
+    categoryId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const res = await this.topRepository.categories.delete({ id: categoryId });
+    if (!res.affected) throw new NotFoundException('Top category not found');
+  }
+
+  public async reorderTopCategories(
+    userData: IUserData,
+    dto: AdminReorderTopCategoriesReqDto,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const ids = dto.items.map((i) => i.categoryId);
+    const categories = await this.topRepository.categories.findBy({
+      id: In(ids),
+    });
+    const map = new Map(dto.items.map((i) => [i.categoryId, i.order]));
+    for (const c of categories) {
+      const order = map.get(c.id);
+      if (order !== undefined) c.order = order;
+    }
+    await this.topRepository.categories.save(categories);
+  }
+
+  public async addVenueToTopCategory(
+    userData: IUserData,
+    categoryId: string,
+    dto: AdminAddVenueToTopCategoryReqDto,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const category = await this.topRepository.getCategoryById(categoryId);
+    if (!category) throw new NotFoundException('Top category not found');
+
+    const venue = await this.venueRepository.findOne({
+      where: { id: dto.venueId },
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+
+    const item = this.topRepository.items.create({
+      category_id: category.id,
+      venue_id: venue.id,
+      order: dto.order ?? 0,
+    });
+    await this.topRepository.items.save(item);
+  }
+
+  public async removeVenueFromTopCategory(
+    userData: IUserData,
+    categoryId: string,
+    venueId: string,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+    await this.topRepository.items.delete({
+      category_id: categoryId,
+      venue_id: venueId,
+    } as any);
+  }
+
+  public async reorderTopCategoryVenues(
+    userData: IUserData,
+    categoryId: string,
+    dto: AdminReorderTopCategoryVenuesReqDto,
+  ): Promise<void> {
+    this.assertSuperAdmin(userData);
+
+    const items = await this.topRepository.items.find({
+      where: { category_id: categoryId } as any,
+    });
+    const map = new Map(dto.items.map((i) => [i.venueId, i.order]));
+    for (const it of items) {
+      const order = map.get(it.venue_id);
+      if (order !== undefined) it.order = order;
+    }
+    await this.topRepository.items.save(items);
+  }
+
+  public async getTopCategoryWithVenues(
+    userData: IUserData,
+    categoryId: string,
+  ): Promise<TopCategoryWithVenuesResDto> {
+    this.assertSuperAdmin(userData);
+
+    const category = await this.topRepository.getCategoryById(categoryId);
+    if (!category) throw new NotFoundException('Top category not found');
+
+    const qb = this.topRepository.items
+      .createQueryBuilder('it')
+      .innerJoinAndSelect('it.venue', 'venue')
+      .leftJoinAndSelect('venue.tags', 'tag')
+      .leftJoinAndSelect('venue.user', 'user')
+      .where('it.category_id = :categoryId', { categoryId })
+      .orderBy('it.order', 'ASC')
+      .addOrderBy('venue.created', 'DESC');
+
+    const rows = await qb.getMany();
+    const venues = rows.map((r) => r.venue!).filter(Boolean);
+
+    return {
+      category: this.mapTopCategory(category),
+      venues: venues.map((v) => VenueMapper.toResponseDTO(v)),
+    };
+  }
+
+  private mapTopCategory(entity: TopCategoryEntity): TopCategoryResDto {
+    return {
+      id: entity.id,
+      title: entity.title,
+      slug: entity.slug,
+      isActive: entity.isActive,
+      order: entity.order,
+      venues: (entity.items ?? []).map((tcv: any) => {
+        const v = tcv.venue ?? tcv;
+        return {
+          id: v.id,
+          name: v.name,
+          city: v.city,
+          avatarVenue: v.avatarVenue,
+        };
+      }),
+    };
+  }
+
+  private slugify(input: string): string {
+    return input
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+}

@@ -1,0 +1,38 @@
+import { CommentEntity } from './comment.entity';
+import { ComplaintEntity } from './complaint.entity';
+import { OAuthProviderEnum } from './enums/oauth-provider.enum';
+import { RoleUserEnum } from './enums/role.enum';
+import { FollowEntity } from './follow.entity';
+import { LikeEntity } from './like.entity';
+import { CreateUpdateModel } from './models/create-update.model';
+import { PyachokEntity } from './pyachok.entity';
+import { RatingVenueEntity } from './rating-venue.entity';
+import { RefreshTokenEntity } from './refresh-token.entity';
+import { VenueEntity } from './venue.entity';
+export declare class UserEntity extends CreateUpdateModel {
+    name: string;
+    email: string;
+    password?: string;
+    bio?: string;
+    image?: string;
+    birthdate?: string;
+    city?: string;
+    gender?: string;
+    instagram?: string;
+    interests?: string;
+    role: RoleUserEnum[];
+    oauthProvider?: OAuthProviderEnum;
+    oauthId?: string;
+    isEmailVerified: boolean;
+    emailVerifyToken?: string;
+    likes?: LikeEntity[];
+    complaints?: ComplaintEntity[];
+    comments?: CommentEntity[];
+    venues?: VenueEntity[];
+    refreshTokens?: RefreshTokenEntity[];
+    followers?: FollowEntity[];
+    followings?: FollowEntity[];
+    rating?: RatingVenueEntity[];
+    pyachok?: PyachokEntity[];
+    favoriteVenues?: VenueEntity[];
+}

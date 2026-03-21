@@ -1,0 +1,170 @@
+.wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.toggleBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    white-space: nowrap;
+    border-radius: 100px;
+    border: 2px solid rgba(193, 138, 102, 0.96);
+    background: rgba(193, 138, 102, 0.96);
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: all .18s;
+}
+
+.toggleBtn:hover, .toggleBtn.open {
+    background: rgb(168, 118, 88);
+    border-color: rgb(168, 118, 88);
+    color: #fff;
+}
+
+.badge {
+    background: rgba(59, 59, 61, 0.96);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    width: 18px;
+    height: 15px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: #fff;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 16px;
+    padding: 20px;
+    width: 460px;
+    max-width: calc(100vw - 32px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin: 0;
+}
+
+.row {
+    display: flex;
+    gap: 8px;
+}
+
+.select, .input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    transition: border .18s;
+    background: #fafafa;
+}
+
+.select:focus, .input:focus {
+    border-color: #222;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid #e0e0e0;
+    background: transparent;
+    font-size: 13px;
+    color: #444;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.chip:hover {
+    border-color: #999;
+}
+
+.chipActive {
+    background: rgba(193, 138, 102, 1);
+    border-color: rgba(193, 138, 102, 1);
+    color: #fff;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.resetBtn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1.5px solid #ddd;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.resetBtn:hover {
+    border-color: #999;
+}
+
+.applyBtn {
+    flex: 2;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(59, 59, 61, 0.96);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+}
+
+.applyBtn:hover {
+    opacity: .85;
+}
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.3);
+}

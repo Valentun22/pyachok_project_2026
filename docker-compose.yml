@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  pyachok-postgres:
+    image: postgis/postgis:16-3.4
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    environment:
+      POSTGRES_USER: '${POSTGRES_USER:-postgres}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:-qweqwe}'
+      POSTGRES_DB: '${POSTGRES_DB:-pyachok}'
+    volumes:
+      - pyachok-db:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pyachok-redis:
+    image: redis:7.2.3
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    command: >
+      --requirepass '${REDIS_PASSWORD:-redispass}'
+    restart: unless-stopped
+    healthcheck:
+      test: [ 'CMD', 'redis-cli', 'ping' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pyachok-s3:
+    image: quay.io/minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    ports:
+      - '${MINIO_API_PORT:-8000}:9000'
+      - '${MINIO_CONSOLE_PORT:-8001}:9001'
+    volumes:
+      - pyachok-s3-data:/data
+    environment:
+      MINIO_ROOT_USER: '${MINIO_ROOT_USER:-user}'
+      MINIO_ROOT_PASSWORD: '${MINIO_ROOT_PASSWORD:-password}'
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live' ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  pyachok-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - '${APP_PORT:-3001}:3001'
+    env_file:
+      - ./backend/.env
+    environment:
+      POSTGRES_HOST: pyachok-postgres
+      REDIS_HOST: pyachok-redis
+      AWS_S3_ENDPOINT: http://pyachok-s3:9000
+      AWS_S3_PUBLIC_URL: '${AWS_S3_PUBLIC_URL:-}'
+      FRONTEND_URL: '${FRONTEND_URL:-http://localhost:3000}'
+    depends_on:
+      pyachok-postgres:
+        condition: service_healthy
+      pyachok-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  pyachok-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: '${REACT_APP_API_URL:-http://localhost:3001}'
+        REACT_APP_GOOGLE_CLIENT_ID: '${REACT_APP_GOOGLE_CLIENT_ID:-}'
+        REACT_APP_FACEBOOK_APP_ID: '${REACT_APP_FACEBOOK_APP_ID:-}'
+    ports:
+      - '${FRONTEND_PORT:-3000}:80'
+    depends_on:
+      - pyachok-backend
+    restart: unless-stopped
+
+volumes:
+  pyachok-db:
+  pyachok-s3-data:
