@@ -23,7 +23,9 @@ const initialState: VenuesState = {
     loadingCard: false,
 };
 
-const getAll = createAsyncThunk<{data: IVenueInterface[], total: number}, {page: number, limit?: number}, { rejectValue: string }>(
+const getAll = createAsyncThunk<{ data: IVenueInterface[], total: number }, { page: number, limit?: number }, {
+    rejectValue: string
+}>(
     'venues/getAll',
     async ({page, limit}, {rejectWithValue}) => {
         try {
