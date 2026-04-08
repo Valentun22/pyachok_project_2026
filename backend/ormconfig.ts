@@ -5,7 +5,6 @@ import { DataSource } from 'typeorm';
 
 import getter from './src/config/configuration';
 
-// In Docker the env vars are injected directly; locally we load from file
 if (!process.env.POSTGRES_HOST) {
   dotenv.config({ path: './environments/local.env' });
 }

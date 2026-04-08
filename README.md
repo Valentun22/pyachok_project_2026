@@ -46,7 +46,6 @@ pyachok_proj/
 ├── frontend/         # React SPA (port 3000)
 ├── docker-compose.yml
 ├── .env.example
-└── package.json      # handy scripts for root
 ```
 
 ---
