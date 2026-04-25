@@ -2,7 +2,7 @@ import {useNavigate} from 'react-router-dom';
 import {INewsItem, NewsTypeEnum} from '../../../interfaces/INewsInterface';
 import css from './NewsCard.module.css';
 
-type Props = { news: INewsItem };
+type IProps = { news: INewsItem };
 
 const TYPE_LABELS: Record<NewsTypeEnum, string> = {
     [NewsTypeEnum.GENERAL]: 'Загальне',
@@ -13,7 +13,7 @@ const TYPE_LABELS: Record<NewsTypeEnum, string> = {
 const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString('uk-UA', {day: 'numeric', month: 'long', year: 'numeric'});
 
-const NewsCard = ({news}: Props) => {
+const NewsCard = ({news}: IProps) => {
     const imgSrc = news.avatarNews ?? news.images?.[0] ?? null;
     const navigate = useNavigate();
 

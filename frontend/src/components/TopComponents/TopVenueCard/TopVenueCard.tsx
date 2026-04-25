@@ -2,9 +2,9 @@ import {useNavigate} from 'react-router-dom';
 import {IVenueListItem} from '../../../interfaces/IVenueSearchInterface';
 import css from './TopVenueCard.module.css';
 
-type Props = { venue: IVenueListItem; rank: number };
+type IProps = { venue: IVenueListItem; rank: number };
 
-const TopVenueCard = ({venue, rank}: Props) => {
+const TopVenueCard = ({venue, rank}: IProps) => {
     const navigate = useNavigate();
 
     return (

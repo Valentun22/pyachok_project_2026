@@ -1,15 +1,19 @@
-import {useEffect, useState} from 'react';
+import {useEffect} from 'react';
+import {useSearchParams} from 'react-router-dom';
 import {useAppDispatch, useAppSelector} from '../../../hooks/useReduxHooks';
 import {venuesActions} from '../../../redux/slices/venuesSlice';
 import {Venue} from '../Venue/Venue';
 import css from './Venues.module.css';
+import Pagination from '../../Pagination/Pagination';
 
-const LIMIT = 12;
+const LIMIT = 9;
 
 const Venues = () => {
     const {venues, loading, error, total} = useAppSelector(state => state.venues);
     const dispatch = useAppDispatch();
-    const [page, setPage] = useState(1);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const page = Number(searchParams.get('page') ?? 1);
+    const setPage = (p: number) => { setSearchParams({page: String(p)}); window.scrollTo(0, 0); };
 
     useEffect(() => {
         dispatch(venuesActions.getAll({page, limit: LIMIT}));
@@ -34,8 +38,7 @@ const Venues = () => {
                 <div className={css.state}>
                     <span>😕</span>
                     <p>{error}</p>
-                    <button className={css.retryBtn}
-                            onClick={() => dispatch(venuesActions.getAll({page, limit: LIMIT}))}>
+                    <button className={css.retryBtn} onClick={() => dispatch(venuesActions.getAll({page, limit: LIMIT}))}>
                         Спробувати знову
                     </button>
                 </div>
@@ -54,18 +57,7 @@ const Venues = () => {
                 </div>
             )}
 
-            {!loading && total > LIMIT && (
-                <div className={css.pagination}>
-                    <button className={css.pageBtn} disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                        ← Попередня
-                    </button>
-                    <span className={css.pageNum}>Сторінка {page} / {Math.ceil(total / LIMIT)}</span>
-                    <button className={css.pageBtn} disabled={page >= Math.ceil(total / LIMIT)}
-                            onClick={() => setPage(p => p + 1)}>
-                        Наступна →
-                    </button>
-                </div>
-            )}
+            {!loading && <Pagination page={page} total={total} limit={LIMIT} onChange={setPage}/>}
         </div>
     );
 };

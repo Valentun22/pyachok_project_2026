@@ -141,6 +141,25 @@ export class MessageService {
     await this.messageRepo.delete({ id: messageId });
   }
 
+  public async getDialog(
+    user: IUserData,
+    otherUserId: string,
+    limit = 50,
+    offset = 0,
+  ): Promise<MessageListResDto> {
+    const [items, total] = await this.messageRepo.getDialog(
+      user.userId,
+      otherUserId,
+      limit,
+      offset,
+    );
+    await this.messageRepo.update(
+      { recipient_id: user.userId, sender_id: otherUserId, isRead: false },
+      { isRead: true },
+    );
+    return { data: items.map((m) => this.toDto(m)), total, unread: 0 };
+  }
+
   public async countUnread(user: IUserData): Promise<{ count: number }> {
     const count = await this.messageRepo.countUnread(user.userId);
     return { count };

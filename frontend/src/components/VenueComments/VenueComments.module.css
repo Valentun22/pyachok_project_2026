@@ -638,3 +638,22 @@
 .checkRemoveBtn:hover {
     background: rgba(220, 38, 38, .8);
 }
+.authMessage {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-size: 15px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    margin: 16px 0;
+}
+
+.authLink {
+    color: rgba(193, 138, 102, 0.96);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.authLink:hover {
+    text-decoration: underline;
+}

@@ -3,9 +3,12 @@ import {useNavigate} from 'react-router-dom';
 import {useAppSelector} from '../../hooks/useReduxHooks';
 import {messageService} from '../../services/massage.service';
 import {IMessage} from '../../interfaces/IMessageInterface';
+import {ChatDialog} from './ChatDialog/ChatDialog';
 import css from './MessagesComponent.module.css';
 
 type Tab = 'inbox' | 'sent';
+
+interface ChatUser { id: string; name: string; image?: string; }
 
 const MessagesComponent = () => {
     const navigate = useNavigate();
@@ -15,6 +18,7 @@ const MessagesComponent = () => {
     const [total, setTotal] = useState(0);
     const [unread, setUnread] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [chatUser, setChatUser] = useState<ChatUser | null>(null);
 
     useEffect(() => {
         if (!isAuth) navigate('/login');
@@ -29,8 +33,7 @@ const MessagesComponent = () => {
             setItems(data.data ?? []);
             setTotal(data.total ?? 0);
             setUnread(data.unread ?? 0);
-        } catch {
-        }
+        } catch {}
         setLoading(false);
     };
 
@@ -40,24 +43,28 @@ const MessagesComponent = () => {
 
     const handleMarkRead = async (msg: IMessage) => {
         if (tab !== 'inbox' || msg.isRead) return;
-        await messageService.markRead(msg.id).catch(() => {
-        });
+        await messageService.markRead(msg.id).catch(() => {});
         setItems(p => p.map(m => m.id === msg.id ? {...m, isRead: true} : m));
         setUnread(u => Math.max(0, u - 1));
     };
 
     const handleMarkAllRead = async () => {
-        await messageService.markAllRead().catch(() => {
-        });
+        await messageService.markAllRead().catch(() => {});
         setItems(p => p.map(m => ({...m, isRead: true})));
         setUnread(0);
     };
 
     const handleDelete = async (id: string) => {
-        await messageService.delete(id).catch(() => {
-        });
+        await messageService.delete(id).catch(() => {});
         setItems(p => p.filter(m => m.id !== id));
         setTotal(t => t - 1);
+    };
+
+    const openChat = (msg: IMessage) => {
+        const other = tab === 'inbox' ? msg.sender : msg.recipient;
+        if (!other?.id) return;
+        handleMarkRead(msg);
+        setChatUser({id: other.id, name: other.name ?? 'Користувач', image: other.image});
     };
 
     const formatDate = (d: string) =>
@@ -107,30 +114,18 @@ const MessagesComponent = () => {
                         <div
                             key={msg.id}
                             className={`${css.card} ${isUnread ? css.cardUnread : ''}`}
-                            onClick={() => handleMarkRead(msg)}
+                            onClick={() => openChat(msg)}
                         >
-                            {/* Avatar */}
-                            <div onClick={e => {
-                                e.stopPropagation();
-                                if (other?.id) navigate(`/users/${other.id}`);
-                            }}>
+                            <div onClick={e => { e.stopPropagation(); if (other?.id) navigate(`/users/${other.id}`); }}>
                                 {other?.image
                                     ? <img src={other.image} alt="" className={css.avatar}/>
-                                    : <div className={css.avatarPlaceholder}>
-                                        {other?.name?.[0]?.toUpperCase() ?? '?'}
-                                    </div>
+                                    : <div className={css.avatarPlaceholder}>{other?.name?.[0]?.toUpperCase() ?? '?'}</div>
                                 }
                             </div>
 
                             <div className={css.cardBody}>
                                 <div className={css.cardTop}>
-                                    <span
-                                        className={css.userName}
-                                        onClick={e => {
-                                            e.stopPropagation();
-                                            if (other?.id) navigate(`/users/${other.id}`);
-                                        }}
-                                    >
+                                    <span className={css.userName} onClick={e => { e.stopPropagation(); if (other?.id) navigate(`/users/${other.id}`); }}>
                                         {other?.name ?? 'Користувач'}
                                         {isUnread && <span className={css.unreadDot}/>}
                                     </span>
@@ -140,30 +135,33 @@ const MessagesComponent = () => {
                                 {msg.pyachok && (
                                     <div className={css.pyachokRef}>
                                         🍺 {msg.pyachok.venue?.name ?? 'Заклад'}
-                                        {` · ${new Date(msg.pyachok.date).toLocaleDateString('uk-UA', {
-                                            day: 'numeric',
-                                            month: 'short'
-                                        })} ${msg.pyachok.time}`}
+                                        {` · ${new Date(msg.pyachok.date).toLocaleDateString('uk-UA', {day: 'numeric', month: 'short'})} ${msg.pyachok.time}`}
                                         {msg.pyachok.purpose && ` · ${msg.pyachok.purpose}`}
                                     </div>
                                 )}
 
                                 <p className={css.text}>{msg.text}</p>
+                                <span className={css.openChat}>Відкрити чат →</span>
                             </div>
 
                             <button
                                 className={css.deleteBtn}
-                                onClick={e => {
-                                    e.stopPropagation();
-                                    handleDelete(msg.id);
-                                }}
+                                onClick={e => { e.stopPropagation(); handleDelete(msg.id); }}
                                 title="Видалити"
-                            >✕
-                            </button>
+                            >✕</button>
                         </div>
                     );
                 })}
             </div>
+
+            {chatUser && (
+                <ChatDialog
+                    userId={chatUser.id}
+                    userName={chatUser.name}
+                    userImage={chatUser.image}
+                    onClose={() => { setChatUser(null); load(tab); }}
+                />
+            )}
         </div>
     );
 };

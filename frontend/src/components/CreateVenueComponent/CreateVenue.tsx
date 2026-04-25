@@ -322,16 +322,16 @@ const CreateVenue = () => {
 
                 <div className={css.stepper}>
                     {STEPS.map((s, i) => (
-                        <>
-                            <div key={s.n}
-                                 className={`${css.stepItem} ${step === s.n ? css.stepActive : step > s.n ? css.stepDone : ''}`}>
+                        <React.Fragment key={s.n}>
+                            <div
+                                className={`${css.stepItem} ${step === s.n ? css.stepActive : step > s.n ? css.stepDone : ''}`}>
                                 <div className={css.stepCircle}>{step > s.n ? '✓' : s.n}</div>
                                 <span className={css.stepLabel}>{s.label}</span>
                             </div>
                             {i < STEPS.length - 1 && (
                                 <div className={`${css.stepConnector} ${step > s.n ? css.stepConnectorDone : ''}`}/>
                             )}
-                        </>
+                        </React.Fragment>
                     ))}
                 </div>
 

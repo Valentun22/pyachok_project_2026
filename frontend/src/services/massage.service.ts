@@ -23,4 +23,7 @@ export const messageService = {
 
     delete: (id: string) =>
         axiosInstance.delete<void>(urls.messages.delete(id)),
+
+    getDialog: (userId: string, limit = 50, offset = 0) =>
+        axiosInstance.get<IMessageListResponse>(urls.messages.dialog(userId), {params: {limit, offset}}),
 };

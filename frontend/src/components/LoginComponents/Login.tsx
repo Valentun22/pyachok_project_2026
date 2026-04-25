@@ -31,6 +31,7 @@ const Login = () => {
 
     const [showPwd, setShowPwd] = useState(false);
     const [form, setForm] = useState({email: '', password: ''});
+    const [fieldErrors, setFieldErrors] = useState<{email?: string; password?: string}>({});
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
     const [googleReady, setGoogleReady] = useState(false);
     const set = (k: string, v: string) => setForm(p => ({...p, [k]: v}));
@@ -56,7 +57,6 @@ const Login = () => {
         });
     }, []);
 
-    // Render Google button only after ref is attached AND script is ready
     useEffect(() => {
         if (!googleReady || !googleBtnRef.current) return;
         window.google?.accounts.id.renderButton(
@@ -84,9 +84,19 @@ const Login = () => {
     };
 
     const handleSubmit = async () => {
+        const errors: {email?: string; password?: string} = {};
+        if (!form.email.trim()) errors.email = 'Введіть email';
+        else if (!/^[^\s@]+@[^\s@.,]+\.[^\s@.,]{2,}$/.test(form.email)) errors.email = 'Введіть коректний email';
+        if (!form.password) errors.password = 'Введіть пароль';
+        setFieldErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+
         const deviceId = `web-${Math.random().toString(36).slice(2)}`;
         const res = await dispatch(authActions.login({...form, deviceId}));
         if (authActions.login.fulfilled.match(res)) navigate('/');
+        else if (authActions.login.rejected.match(res)) {
+            setFieldErrors({password: 'Невірний email або пароль'});
+        }
     };
 
     const showOAuth = !!(GOOGLE_CLIENT_ID || FACEBOOK_APP_ID);
@@ -94,27 +104,31 @@ const Login = () => {
     return (
         <div className={css.page}>
             <div className={css.card}>
+                <button className={css.closeBtn} onClick={() => navigate(-1)} aria-label="Закрити">✕</button>
+                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
+                    ← Назад
+                </button>
                 <h1 className={css.title}>Вхід</h1>
                 <p className={css.sub}>Раді бачити тебе знову!</p>
 
                 <div className={css.field}>
                     <label className={css.label}>Email</label>
                     <input className={css.input} type="email" placeholder="your@email.com"
-                           value={form.email} onChange={e => set('email', e.target.value)}/>
+                           value={form.email} onChange={e => { set('email', e.target.value); setFieldErrors(p => ({...p, email: ''})); }}/>
+                    {fieldErrors.email && <p className={css.fieldError}>{fieldErrors.email}</p>}
                 </div>
                 <div className={css.field}>
                     <label className={css.label}>Пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showPwd ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.password} onChange={e => set('password', e.target.value)}
+                               value={form.password} onChange={e => { set('password', e.target.value); setFieldErrors(p => ({...p, password: ''})); }}
                                onKeyDown={e => e.key === 'Enter' && handleSubmit()}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowPwd(v => !v)}>
                             {showPwd ? '🙈' : '👁'}
                         </button>
                     </div>
+                    {fieldErrors.password && <p className={css.fieldError}>{fieldErrors.password}</p>}
                 </div>
-
-                {error && <p className={css.error}>{error}</p>}
 
                 <button className={css.submitBtn} onClick={handleSubmit} disabled={loading}>
                     {loading ? <span className={css.spinner}/> : 'Увійти'}

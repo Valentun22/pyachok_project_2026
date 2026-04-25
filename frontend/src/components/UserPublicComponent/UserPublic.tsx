@@ -33,8 +33,6 @@ const UserPublicComponent = () => {
     useEffect(() => {
         if (!id) return;
         setLoading(true);
-        // axiosInstance автоматично додає Bearer токен —
-        // бекенд через @SkipAuth + guard поверне isFollowed якщо токен є
         axiosInstance.get(urls.users.publicById(id))
             .then(({data}) => {
                 setUser(data);

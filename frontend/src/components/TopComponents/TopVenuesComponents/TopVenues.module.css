@@ -60,7 +60,7 @@
 
 .tab:hover {
     border-color: #555;
-    color: #222;
+    color: rgba(193, 138, 102, 0.96);
 }
 
 .tabActive {

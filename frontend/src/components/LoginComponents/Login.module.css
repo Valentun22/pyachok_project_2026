@@ -14,6 +14,7 @@
     width: 100%;
     max-width: 420px;
     box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+    position: relative;
 }
 
 .title {
@@ -276,4 +277,48 @@
 
 .eyeBtn:hover {
     opacity: 1;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+}
+
+.closeBtn:hover {
+    color: #333;
+    background: #f0f0f0;
+}
+
+.backBtn {
+    background: none;
+    border: none;
+    color: rgba(193, 138, 102, 0.96);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 16px;
+    display: block;
+    transition: opacity 0.15s;
+}
+
+.backBtn:hover {
+    opacity: 0.75;
+}
+
+.fieldError {
+    font-size: 12px;
+    color: #e53e3e;
+    font-weight: 600;
+    margin: 4px 0 0;
 }

@@ -64,6 +64,22 @@ export class MessageController {
     return this.service.markAllRead(user);
   }
 
+  @ApiOperation({ summary: 'Get dialog with user' })
+  @Get('messages/dialog/:userId')
+  dialog(
+    @Param('userId', new ParseUUIDPipe()) userId: string,
+    @CurrentUser() user: IUserData,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.service.getDialog(
+      user,
+      userId,
+      Number(limit) || 50,
+      Number(offset) || 0,
+    );
+  }
+
   @ApiOperation({ summary: 'Send message to user' })
   @Post('messages/to/:recipientId')
   send(

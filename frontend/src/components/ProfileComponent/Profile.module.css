@@ -1176,6 +1176,26 @@
     border-color: rgba(193, 138, 102, 0.96);
 }
 
+.deleteAccountBtn {
+    width: 100%;
+    margin-top: 8px;
+    background: rgba(220, 53, 69, 0.08);
+    border: 1.5px solid rgba(220, 53, 69, 0.4);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc3545;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.deleteAccountBtn:hover {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
 .passwordForm {
     display: flex;
     flex-direction: column;
@@ -1370,7 +1390,6 @@
     }
 }
 
-/* ── Follows tab ── */
 .followSubtitle {
     font-size: 15px;
     font-weight: 700;

@@ -1,11 +1,12 @@
 import {useEffect, useRef, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, useSearchParams} from 'react-router-dom';
 import {useAppSelector} from '../../hooks/useReduxHooks';
 import {adminService} from '../../services/admin.service';
 import {toast} from '../../services/toast.service';
 import {axiosInstance} from '../../services/axiosInstance.service';
 import {urls} from '../../constants/urls';
 import css from './AdminComponent.module.css';
+import Pagination from '../Pagination/Pagination';
 
 type AdminTab = 'venues' | 'pending' | 'users' | 'complaints' | 'comments' | 'top' | 'cms';
 
@@ -50,15 +51,35 @@ const STATUS_COLORS: Record<string, string> = {
 
 const VenuesTab = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [items, setItems] = useState<IAdminVenue[]>([]);
     const [total, setTotal] = useState(0);
     const adminId = JSON.parse(localStorage.getItem('user') ?? '{}')?.id ?? '';
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [filterMod, setFilterMod] = useState<string>('all');
-    const [filterActive, setFilterActive] = useState<string>('all');
+    const search = searchParams.get('search') ?? '';
+    const filterMod = searchParams.get('moderated') ?? 'all';
+    const filterActive = searchParams.get('active') ?? 'all';
     const [offset, setOffset] = useState(0);
     const LIMIT = 15;
+
+    const setSearch = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v ? n.set('search', v) : n.delete('search');
+        n.delete('offset');
+        return n;
+    });
+    const setFilterMod = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v === 'all' ? n.delete('moderated') : n.set('moderated', v);
+        n.delete('offset');
+        return n;
+    });
+    const setFilterActive = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v === 'all' ? n.delete('active') : n.set('active', v);
+        n.delete('offset');
+        return n;
+    });
 
     const [ownerModal, setOwnerModal] = useState<{ id: string; name: string } | null>(null);
     const [ownerLoading, setOwnerLoading] = useState(false);
@@ -73,28 +94,33 @@ const VenuesTab = () => {
     const [ratingLoading, setRatingLoading] = useState(false);
 
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
+    const vPage = Number(searchParams.get('vpage') ?? 1);
+    const setVPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('vpage', String(p));
+        return n;
+    });
 
-    const load = async (off = 0) => {
+    const load = async (p = vPage) => {
         setLoading(true);
-        const params: any = {limit: LIMIT, offset: off};
+        const params: any = {limit: LIMIT, offset: (p - 1) * LIMIT};
         if (search) params.search = search;
         if (filterMod !== 'all') params.isModerated = filterMod === 'true';
         if (filterActive !== 'all') params.isActive = filterActive === 'true';
         try {
             const {data} = await adminService.getVenues(params);
             const list = data.data ?? data ?? [];
-            if (off === 0) setItems(list);
-            else setItems(p => [...p, ...list]);
+            setItems(list);
             setTotal(data.total ?? list.length);
-            setOffset(off + list.length);
-        } catch { /* ignore */
+            setOffset((p - 1) * LIMIT + list.length);
+        } catch {
         }
         setLoading(false);
     };
 
     useEffect(() => {
-        void load(0);
-    }, [search, filterMod, filterActive]); // eslint-disable-line
+        void load(vPage);
+    }, [search, filterMod, filterActive, vPage]);
 
     const handleModerate = async (id: string) => {
         await adminService.moderateVenue(id)
@@ -259,13 +285,10 @@ const VenuesTab = () => {
                 </table>
             </div>
 
-            {!loading && items.length < total && (
-                <div className={css.loadMoreRow}>
-                    <button className={css.loadMoreBtn} onClick={() => load(offset)}>
-                        Ще заклади ({total - items.length})
-                    </button>
-                </div>
-            )}
+            {!loading && <Pagination page={vPage} total={total} limit={LIMIT} onChange={p => {
+                setVPage(p);
+                window.scrollTo(0, 0);
+            }}/>}
 
             {deleteConfirm && (
                 <div className={css.modalOverlay}>
@@ -529,32 +552,46 @@ const PendingTab = () => {
 
 const UsersTab = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const {user} = useAppSelector(state => state.auth);
+    const currentUserId = (user as any)?.id;
     const [items, setItems] = useState<IAdminUser[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const search = searchParams.get('usearch') ?? '';
     const [offset, setOffset] = useState(0);
     const LIMIT = 15;
 
-    const load = async (off = 0) => {
+    const setSearch = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v ? n.set('usearch', v) : n.delete('usearch');
+        return n;
+    });
+
+    const uPage = Number(searchParams.get('upage') ?? 1);
+    const setUPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('upage', String(p));
+        return n;
+    });
+
+    const load = async (p = uPage) => {
         setLoading(true);
-        const params: any = {limit: LIMIT, offset: off, search: search || undefined};
+        const params: any = {limit: LIMIT, offset: (p - 1) * LIMIT, search: search || undefined};
         try {
             const {data} = await adminService.getUsers(params);
             const list = data.data ?? data ?? [];
-            if (off === 0) setItems(list);
-            else setItems(p => [...p, ...list]);
+            setItems(list);
             setTotal(data.total ?? list.length);
-            setOffset(off + list.length);
+            setOffset((p - 1) * LIMIT + list.length);
         } catch {
         }
         setLoading(false);
     };
 
     useEffect(() => {
-        void load(0);
-    }, [search]);
-
+        void load(uPage);
+    }, [search, uPage]);
     const handleDelete = async (id: string) => {
         if (!window.confirm('Видалити користувача?')) return;
         await adminService.deleteUser(id)
@@ -615,7 +652,9 @@ const UsersTab = () => {
                                 </div>
                             </td>
                             <td>
-                                <button className={css.deleteBtn} onClick={() => handleDelete(u.id)}>🗑</button>
+                                {u.id !== currentUserId && (
+                                    <button className={css.deleteBtn} onClick={() => handleDelete(u.id)}>🗑</button>
+                                )}
                             </td>
                         </tr>
                     ))}
@@ -623,13 +662,10 @@ const UsersTab = () => {
                 </table>
             </div>
 
-            {!loading && items.length < total && (
-                <div className={css.loadMoreRow}>
-                    <button className={css.loadMoreBtn} onClick={() => load(offset)}>
-                        Ще ({total - items.length})
-                    </button>
-                </div>
-            )}
+            {!loading && <Pagination page={uPage} total={total} limit={LIMIT} onChange={p => {
+                setUPage(p);
+                window.scrollTo(0, 0);
+            }}/>}
         </div>
     );
 };
@@ -1272,8 +1308,13 @@ const CmsTab = () => {
 
 const AdminComponent = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {isAuth} = useAppSelector(state => state.auth);
-    const [tab, setTab] = useState<AdminTab>('pending');
+    const tab = (searchParams.get('tab') ?? 'pending') as AdminTab;
+
+    const setTab = (key: AdminTab) => {
+        setSearchParams({tab: key});
+    };
 
     useEffect(() => {
         if (!isAuth) navigate('/login');

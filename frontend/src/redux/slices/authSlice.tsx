@@ -55,7 +55,14 @@ const login = createAsyncThunk<any, ILoginDto, { rejectValue: string }>(
             return await authService.login(dto);
         } catch (e) {
             const err = e as AxiosError<any>;
-            return rejectWithValue(err.response?.data?.message ?? 'Невірний email або пароль');
+            const status = err.response?.status;
+            const data = err.response?.data;
+            const msg = data?.message ?? data?.messages;
+            const serverMsg = Array.isArray(msg) ? msg[0] : msg;
+            if (status === 401 && serverMsg && serverMsg !== 'Unauthorized') {
+                return rejectWithValue(serverMsg);
+            }
+            return rejectWithValue('Невірний email або пароль');
         }
     }
 );
@@ -67,7 +74,12 @@ const register = createAsyncThunk<any, IRegisterDto, { rejectValue: string }>(
             return await authService.register(dto);
         } catch (e) {
             const err = e as AxiosError<any>;
-            const msg = err.response?.data?.message;
+            const data = err.response?.data;
+            const status = err.response?.status;
+            if (status === 400 && (data?.message === 'Bad request' || !data?.messages)) {
+                return rejectWithValue('Перевірте правильність введених даних');
+            }
+            const msg = data?.message ?? data?.messages;
             return rejectWithValue(Array.isArray(msg) ? msg[0] : msg ?? 'Помилка реєстрації');
         }
     }

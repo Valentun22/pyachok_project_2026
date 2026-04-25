@@ -36,7 +36,8 @@
     overflow: hidden;
 }
 
-.infoBlock button {
+.infoBlock button,
+.infoBlock a {
     flex-shrink: 1;
     padding: 0 clamp(5px, 0.55vw, 12px);
     height: 34px;
@@ -55,9 +56,12 @@
     align-items: center;
     justify-content: center;
     text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
 }
 
-.infoBlock button:hover {
+.infoBlock button:hover,
+.infoBlock a:hover {
     background-color: rgba(193, 138, 102, 0.96);
     color: #fff;
     transform: translateY(-1px);
@@ -66,7 +70,34 @@
 .btn2 {
     letter-spacing: 0.3px;
     position: relative;
-    overflow: hidden;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn2Active,
+.btn2Active:hover {
+    background-color: transparent !important;
+    color: rgba(193, 138, 102, 0.96) !important;
+    border-color: rgba(193, 138, 102, 0.96) !important;
+    transform: none !important;
+}
+
+.btn2Active::after {
+    width: 70% !important;
+}
+
+.btn2Active::before {
+    width: 50% !important;
+    height: 3px !important;
+    background: rgba(193, 138, 102, 0.96) !important;
+}
+
+.btn2Active::after {
+    width: 70% !important;
+    height: 3px !important;
+    background: rgba(193, 138, 102, 0.96) !important;
 }
 
 .btn2:hover,

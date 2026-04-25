@@ -183,7 +183,7 @@ const VenueComments: FC<IProps> = ({venueId}) => {
         if (!file) return;
         setCheckFile(file);
         setCheckPreview(URL.createObjectURL(file));
-        setF('image_check', ''); // буде замінено після upload
+        setF('image_check', '');
     };
 
     const uploadCheckFile = async (): Promise<string | undefined> => {
@@ -204,6 +204,7 @@ const VenueComments: FC<IProps> = ({venueId}) => {
     };
 
     const fetchComments = async (reset = false) => {
+        if (!isAuth) return;
         const off = reset ? 0 : offset;
         reset ? setLoading(true) : setLoadingMore(true);
         try {
@@ -273,7 +274,7 @@ const VenueComments: FC<IProps> = ({venueId}) => {
     return (
         <section className={css.section}>
             <div className={css.sectionHeader}>
-                <h2 className={css.sectionTitle}>Відгуки <span className={css.totalBadge}>{total}</span></h2>
+                <h2 className={css.sectionTitle}>Відгуки</h2>
                 {isAuth && !showForm && (
                     <button className={css.writeBtn} onClick={() => setShowForm(true)}>
                         ✏️ Написати відгук

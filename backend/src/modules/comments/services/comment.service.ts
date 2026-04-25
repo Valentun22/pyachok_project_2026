@@ -24,13 +24,13 @@ export class CommentService {
   ) {}
 
   public async getListByVenue(
-    userData: IUserData,
+    userData: IUserData | null,
     venueId: string,
     query: CommentListQueryDto,
   ): Promise<[CommentEntity[], number]> {
     await this.checkIsVenueExistOrThrow(venueId);
     return await this.commentRepository.getListByVenue(
-      userData.userId,
+      userData?.userId ?? null,
       venueId,
       query,
     );

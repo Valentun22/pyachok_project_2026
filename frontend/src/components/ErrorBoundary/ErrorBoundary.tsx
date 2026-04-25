@@ -1,7 +1,7 @@
 import {Component, ErrorInfo, ReactNode} from 'react';
 import css from './ErrorBoundary.module.css';
 
-interface Props {
+interface IProps {
     children: ReactNode;
 }
 
@@ -10,8 +10,8 @@ interface State {
     error: Error | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
-    constructor(props: Props) {
+class ErrorBoundary extends Component<IProps, State> {
+    constructor(props: IProps) {
         super(props);
         this.state = {hasError: false, error: null};
     }

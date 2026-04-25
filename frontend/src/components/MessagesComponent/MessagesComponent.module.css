@@ -197,3 +197,10 @@
 .deleteBtn:hover {
     color: #e53e3e;
 }
+.openChat {
+    font-size: 12px;
+    color: rgba(193,138,102,0.96);
+    font-weight: 600;
+    margin-top: 4px;
+    display: block;
+}

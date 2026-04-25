@@ -1,13 +1,24 @@
-import { useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../../../hooks/useReduxHooks';
-import { topActions } from '../../../redux/slices/topSlice';
-import { TopVenueCard } from '../TopVenueCard/TopVenueCard';
+import {useEffect, useState} from 'react';
+import {useSearchParams} from 'react-router-dom';
+import {useAppDispatch, useAppSelector} from '../../../hooks/useReduxHooks';
+import {topActions} from '../../../redux/slices/topSlice';
+import {TopVenueCard} from '../TopVenueCard/TopVenueCard';
 import css from './TopVenues.module.css';
+import Pagination from '../../Pagination/Pagination';
+
+const LIMIT = 5;
 
 const TopVenues = () => {
     const dispatch = useAppDispatch();
-    const { categories, activeSlug, activeCategory, loadingList, loadingVenues, error } =
+    const [searchParams, setSearchParams] = useSearchParams();
+    const {categories, activeSlug, activeCategory, loadingList, loadingVenues, error} =
         useAppSelector(state => state.top);
+
+    const page = Number(searchParams.get('page') ?? 1);
+    const setPage = (p: number) => {
+        setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n; });
+        window.scrollTo(0, 0);
+    };
 
     useEffect(() => {
         dispatch(topActions.getCategories());
@@ -24,7 +35,11 @@ const TopVenues = () => {
     const handleTabClick = (slug: string) => {
         dispatch(topActions.setActiveSlug(slug));
         dispatch(topActions.getCategoryBySlug(slug));
+        setPage(1);
     };
+
+    const venues = activeCategory?.venues ?? [];
+    const paginatedVenues = venues.slice((page - 1) * LIMIT, page * LIMIT);
 
     return (
         <div className={css.page}>
@@ -36,7 +51,7 @@ const TopVenues = () => {
 
             {loadingList ? (
                 <div className={css.tabsSkeleton}>
-                    {Array.from({ length: 4 }).map((_, i) => <div key={i} className={css.tabSkeleton} />)}
+                    {Array.from({length: 4}).map((_, i) => <div key={i} className={css.tabSkeleton}/>)}
                 </div>
             ) : (
                 <div className={css.tabs}>
@@ -52,36 +67,30 @@ const TopVenues = () => {
                 </div>
             )}
 
-            {error && !loadingVenues && (
-                <div className={css.state}><span>😕</span><p>{error}</p></div>
-            )}
+            {error && !loadingVenues && <div className={css.state}><span>😕</span><p>{error}</p></div>}
 
             {loadingVenues ? (
                 <div className={css.list}>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className={css.skeleton} />
-                    ))}
+                    {Array.from({length: 6}).map((_, i) => <div key={i} className={css.skeleton}/>)}
                 </div>
             ) : activeCategory ? (
                 <>
                     <div className={css.categoryHeader}>
                         <h2 className={css.categoryTitle}>{activeCategory.category.title}</h2>
-                        <span className={css.categoryCount}>
-                            {activeCategory.venues.length} закладів
-                        </span>
+                        <span className={css.categoryCount}>{venues.length} закладів</span>
                     </div>
 
-                    {activeCategory.venues.length === 0 ? (
-                        <div className={css.state}>
-                            <span>🏗</span>
-                            <p>У цій категорії поки немає закладів</p>
-                        </div>
+                    {venues.length === 0 ? (
+                        <div className={css.state}><span>🏗</span><p>У цій категорії поки немає закладів</p></div>
                     ) : (
-                        <div className={css.list}>
-                            {activeCategory.venues.map((venue, i) => (
-                                <TopVenueCard key={venue.id} venue={venue as any} rank={i + 1} />
-                            ))}
-                        </div>
+                        <>
+                            <div className={css.list}>
+                                {paginatedVenues.map((venue, i) => (
+                                    <TopVenueCard key={venue.id} venue={venue as any} rank={(page - 1) * LIMIT + i + 1}/>
+                                ))}
+                            </div>
+                            <Pagination page={page} total={venues.length} limit={LIMIT} onChange={setPage}/>
+                        </>
                     )}
                 </>
             ) : null}
@@ -89,4 +98,4 @@ const TopVenues = () => {
     );
 };
 
-export { TopVenues };
+export {TopVenues};

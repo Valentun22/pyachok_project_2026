@@ -13,7 +13,7 @@ import { TransformHelper } from '../../../../common/helpers/transform.helper';
 export class BaseUserReqDto {
   @IsOptional()
   @IsString()
-  @Length(3, 50)
+  @Length(2, 50)
   @Transform(TransformHelper.trim)
   @Type(() => String)
   name?: string;

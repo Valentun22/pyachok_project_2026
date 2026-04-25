@@ -1,9 +1,11 @@
-import {useEffect, useCallback} from 'react';
+import {useEffect} from 'react';
+import {useSearchParams} from 'react-router-dom';
 import {useAppDispatch, useAppSelector} from '../../../hooks/useReduxHooks';
 import {newsActions} from '../../../redux/slices/newsSlice';
 import {NewsTypeEnum} from '../../../interfaces/INewsInterface';
 import css from './News.module.css';
 import {NewsCard} from "../NewsCard/NewsCard";
+import Pagination from '../../Pagination/Pagination';
 
 const TYPE_FILTERS: { label: string; value: NewsTypeEnum | null }[] = [
     {label: 'Всі', value: null},
@@ -12,41 +14,32 @@ const TYPE_FILTERS: { label: string; value: NewsTypeEnum | null }[] = [
     {label: 'Події', value: NewsTypeEnum.EVENT},
 ];
 
+const LIMIT =9;
+
 const News = () => {
     const dispatch = useAppDispatch();
-    const {news, total, offset, limit, activeType, loading, loadingMore, error} =
-        useAppSelector(state => state.news);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const {news, total, activeType, loading, error} = useAppSelector(state => state.news);
 
-    const hasMore = offset < total;
+    const page = Number(searchParams.get('page') ?? 1);
 
-    const fetchNews = useCallback((reset = false) => {
-        dispatch(newsActions.setActiveType(reset ? null : activeType));
-        dispatch(newsActions.getAll({
-            type: activeType ?? undefined,
-            offset: 0,
-            limit,
-        }));
-    }, [dispatch, activeType, limit]);
+    const setPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('page', String(p));
+        return n;
+    });
 
     useEffect(() => {
-        dispatch(newsActions.getAll({offset: 0, limit}));
-    }, [dispatch, limit]);
+        dispatch(newsActions.getAll({
+            type: activeType ?? undefined,
+            offset: (page - 1) * LIMIT,
+            limit: LIMIT,
+        }));
+    }, [dispatch, page, activeType]);
 
     const handleTypeChange = (type: NewsTypeEnum | null) => {
         dispatch(newsActions.setActiveType(type));
-        dispatch(newsActions.getAll({
-            type: type ?? undefined,
-            offset: 0,
-            limit,
-        }));
-    };
-
-    const handleLoadMore = () => {
-        dispatch(newsActions.loadMore({
-            type: activeType ?? undefined,
-            offset,
-            limit,
-        }));
+        setPage(1);
     };
 
     return (
@@ -79,7 +72,7 @@ const News = () => {
             {error && !loading && (
                 <div className={css.error}>
                     <p>😕 {error}</p>
-                    <button className={css.retryBtn} onClick={() => fetchNews()}>Спробувати знову</button>
+                    <button className={css.retryBtn} onClick={() => dispatch(newsActions.getAll({offset: (page - 1) * LIMIT, limit: LIMIT}))}>Спробувати знову</button>
                 </div>
             )}
 
@@ -97,22 +90,7 @@ const News = () => {
                             <NewsCard key={item.id} news={item}/>
                         ))}
                     </div>
-
-                    {hasMore && (
-                        <div className={css.loadMoreWrap}>
-                            <button
-                                className={css.loadMoreBtn}
-                                onClick={handleLoadMore}
-                                disabled={loadingMore}
-                            >
-                                {loadingMore ? (
-                                    <span className={css.spinner}/>
-                                ) : (
-                                    `Завантажити ще (${total - offset} залишилось)`
-                                )}
-                            </button>
-                        </div>
-                    )}
+                    <Pagination page={page} total={total} limit={LIMIT} onChange={p => { setPage(p); window.scrollTo(0, 0); }}/>
                 </>
             )}
         </div>

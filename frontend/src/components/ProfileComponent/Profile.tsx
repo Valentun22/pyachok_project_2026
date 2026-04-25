@@ -5,6 +5,15 @@ import {authActions} from '../../redux/slices/authSlice';
 import {userService} from '../../services/user.service';
 import {pyachokService} from '../../services/pyachok.service';
 import {axiosInstance} from '../../services/axiosInstance.service';
+import {
+    IFullUser,
+    IFollowUser,
+    IFavoriteVenue,
+    IMyComment,
+    IMyRating,
+    IPyachokRow,
+    IMyVenue
+} from '../../interfaces/IProfileInterface';
 import {urls} from '../../constants/urls';
 import css from './Profile.module.css';
 import {toast} from "../../services/toast.service";
@@ -48,68 +57,6 @@ const RoleToggle = ({active, label, desc, onAdd, onRemove}: IRoleToggleProps) =>
 
 type Tab = 'info' | 'venues' | 'favorites' | 'comments' | 'ratings' | 'pyachok' | 'follows';
 
-interface IFollowUser {
-    id: string;
-    name?: string;
-    image?: string;
-    isCritic?: boolean;
-}
-
-interface IFavoriteVenue {
-    id: string;
-    name: string;
-    avatarVenue?: string;
-    city?: string;
-}
-
-interface IMyComment {
-    id: string;
-    title: string;
-    body?: string;
-    rating: number;
-    created: string;
-    venue?: { id: string; name: string };
-}
-
-interface IMyRating {
-    id: string;
-    rating: number;
-    created: string;
-    venue?: { id: string; name: string; avatarVenue?: string };
-}
-
-interface IPyachokRow {
-    id: string;
-    date: string;
-    time: string;
-    purpose?: string;
-    status: string;
-    venue?: { id: string; name: string };
-}
-
-interface IMyVenue {
-    id: string;
-    name: string;
-    avatarVenue?: string;
-    city?: string;
-    isActive?: boolean;
-    isModerated?: boolean;
-}
-
-interface IFullUser {
-    id: string;
-    name?: string;
-    email?: string;
-    image?: string;
-    bio?: string;
-    isCritic?: boolean;
-    role?: string[];
-    birthdate?: string;
-    city?: string;
-    gender?: string;
-    instagram?: string;
-    interests?: string;
-}
 
 const Profile = () => {
     const dispatch = useAppDispatch();
@@ -651,6 +598,20 @@ const Profile = () => {
                     }}>
                         🔒 Змінити пароль
                     </button>
+                    {!isAdmin && (
+                        <button className={css.deleteAccountBtn} onClick={() => {
+                            if (window.confirm('Ви впевнені? Акаунт буде видалено назавжди!')) {
+                                axiosInstance.delete('/users/me')
+                                    .then(() => {
+                                        dispatch(authActions.logout());
+                                        navigate('/');
+                                    })
+                                    .catch(() => alert('Помилка видалення акаунту'));
+                            }
+                        }}>
+                            🗑 Видалити акаунт
+                        </button>
+                    )}
                 </aside>
 
                 <main className={`${css.main} ${sidebarOpen ? css.mainHidden : ''}`}>
@@ -972,7 +933,8 @@ const Profile = () => {
                                                 >
                                                     {u.image
                                                         ? <img src={u.image} alt={u.name} className={css.followAvatar}/>
-                                                        : <div className={css.followAvatarPlaceholder}>{u.name?.[0]?.toUpperCase() ?? '?'}</div>
+                                                        : <div
+                                                            className={css.followAvatarPlaceholder}>{u.name?.[0]?.toUpperCase() ?? '?'}</div>
                                                     }
                                                     <span className={css.followName}>{u.name ?? 'Анонім'}</span>
                                                     {u.isCritic && <span className={css.followCritic}>🏅</span>}
@@ -999,7 +961,8 @@ const Profile = () => {
                                                 >
                                                     {u.image
                                                         ? <img src={u.image} alt={u.name} className={css.followAvatar}/>
-                                                        : <div className={css.followAvatarPlaceholder}>{u.name?.[0]?.toUpperCase() ?? '?'}</div>
+                                                        : <div
+                                                            className={css.followAvatarPlaceholder}>{u.name?.[0]?.toUpperCase() ?? '?'}</div>
                                                     }
                                                     <span className={css.followName}>{u.name ?? 'Анонім'}</span>
                                                     {u.isCritic && <span className={css.followCritic}>🏅</span>}
@@ -1106,7 +1069,6 @@ const Profile = () => {
 
                             <div className={css.ratingsList}>
                                 {ratings.map((r: any) => {
-                                    // API returns venue data directly with myRating field
                                     const venueName = r.name ?? r.venue?.name ?? 'Заклад';
                                     const venueId = r.id ?? r.venue?.id;
                                     const venueImg = r.avatarVenue ?? r.venue?.avatarVenue;
@@ -1126,11 +1088,15 @@ const Profile = () => {
                                                 <h3 className={css.ratingVenue}>{venueName}</h3>
                                                 <div className={css.ratingStars}>
                                                     {Array.from({length: 10}).map((_, i) => (
-                                                        <span key={i} style={{color: i < ratingVal ? '#f59e0b' : '#e5e7eb', fontSize: '16px'}}>★</span>
+                                                        <span key={i} style={{
+                                                            color: i < ratingVal ? '#f59e0b' : '#e5e7eb',
+                                                            fontSize: '16px'
+                                                        }}>★</span>
                                                     ))}
                                                     <span className={css.ratingNum}>{ratingVal}/10</span>
                                                 </div>
-                                                {ratingDate && <p className={css.ratingDate}>{new Date(ratingDate).toLocaleDateString('uk-UA')}</p>}
+                                                {ratingDate &&
+                                                    <p className={css.ratingDate}>{new Date(ratingDate).toLocaleDateString('uk-UA')}</p>}
                                             </div>
                                         </div>
                                     );

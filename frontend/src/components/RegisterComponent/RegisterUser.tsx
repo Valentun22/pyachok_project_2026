@@ -34,6 +34,7 @@ const RegisterUser = () => {
     const [form, setForm] = useState({name: '', email: '', password: '', confirm: ''});
     const set = (k: string, v: string) => setForm(p => ({...p, [k]: v}));
     const [localError, setLocalError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<{name?: string; email?: string; password?: string; confirm?: string}>({});
     const [emailSent, setEmailSent] = useState(false);
     const [oauthLoading, setOauthLoading] = useState<string | null>(null);
     const [googleReady, setGoogleReady] = useState(false);
@@ -84,15 +85,29 @@ const RegisterUser = () => {
     };
 
     const handleSubmit = async () => {
-        if (form.password !== form.confirm) {
-            setLocalError('Паролі не збігаються');
-            return;
-        }
+        const errors: {name?: string; email?: string; password?: string; confirm?: string} = {};
+
+        if (!form.name.trim()) errors.name = "Введіть ім'я";
+        else if (form.name.trim().length < 2) errors.name = "Ім'я має бути не менше 2 символів";
+        if (!form.email.trim()) errors.email = 'Введіть email';
+        else if (!/^[^\s@]+@[^\s@.,]+\.[^\s@.,]{2,}$/.test(form.email)) errors.email = 'Введіть коректний email';
+
         const pwdRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%_*#?&])[A-Za-z\d@$_!%*#?&]{8,}$/;
-        if (!pwdRegex.test(form.password)) {
-            setLocalError('Пароль: мін. 8 символів, літера + цифра + спецсимвол (@$!%_*#?&)');
-            return;
+        if (!form.password) {
+            errors.password = 'Введіть пароль';
+        } else if (!pwdRegex.test(form.password)) {
+            errors.password = 'Мін. 8 символів: літера + цифра + спецсимвол (@$!%_*#?&)';
         }
+
+        if (!form.confirm) {
+            errors.confirm = 'Підтвердіть пароль';
+        } else if (form.password !== form.confirm) {
+            errors.confirm = 'Паролі не збігаються';
+        }
+
+        setFieldErrors(errors);
+        if (Object.keys(errors).length > 0) return;
+
         setLocalError('');
         const {name, email, password} = form;
         const deviceId = `web-${Math.random().toString(36).slice(2)}`;
@@ -100,7 +115,12 @@ const RegisterUser = () => {
         if (authActions.register.fulfilled.match(res)) {
             setEmailSent(true);
         } else if (authActions.register.rejected.match(res)) {
-            setLocalError((res.payload as string) || 'Помилка реєстрації');
+            const msg = (res.payload as string) || '';
+            if (msg.toLowerCase().includes('email')) {
+                setFieldErrors(p => ({...p, email: msg}));
+            } else {
+                setLocalError(msg || 'Помилка реєстрації');
+            }
         }
     };
 
@@ -128,6 +148,10 @@ const RegisterUser = () => {
     return (
         <div className={css.page}>
             <div className={css.card}>
+                <button className={css.closeBtn} onClick={() => navigate(-1)} aria-label="Закрити">✕</button>
+                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
+                    ← Назад
+                </button>
                 <h1 className={css.title}>Реєстрація</h1>
                 <p className={css.sub}>Приєднуйся до спільноти!</p>
 
@@ -139,7 +163,8 @@ const RegisterUser = () => {
                         <label className={css.label}>{label}</label>
                         <input className={css.input} type={type} placeholder={ph}
                                value={(form as any)[key]}
-                               onChange={e => set(key, e.target.value)}/>
+                               onChange={e => { set(key, e.target.value); setFieldErrors(p => ({...p, [key]: ''})); }}/>
+                        {(fieldErrors as any)[key] && <p className={css.fieldError}>{(fieldErrors as any)[key]}</p>}
                     </div>
                 ))}
 
@@ -147,27 +172,31 @@ const RegisterUser = () => {
                     <label className={css.label}>Пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showPwd ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.password} onChange={e => set('password', e.target.value)}/>
+                               value={form.password} onChange={e => { set('password', e.target.value); setFieldErrors(p => ({...p, password: ''})); }}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowPwd(v => !v)}>
                             {showPwd ? '🙈' : '👁'}
                         </button>
                     </div>
-                    <p className={css.hint}>Мін. 8 символів: літера + цифра + спецсимвол (@$!%_*#?&)</p>
+                    {fieldErrors.password
+                        ? <p className={css.fieldError}>{fieldErrors.password}</p>
+                        : <p className={css.hint}>Мін. 8 символів: літера + цифра + спецсимвол (@$!%_*#?&)</p>
+                    }
                 </div>
 
                 <div className={css.field}>
                     <label className={css.label}>Підтвердіть пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showConfirm ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.confirm} onChange={e => set('confirm', e.target.value)}
+                               value={form.confirm} onChange={e => { set('confirm', e.target.value); setFieldErrors(p => ({...p, confirm: ''})); }}
                                onKeyDown={e => e.key === 'Enter' && handleSubmit()}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowConfirm(v => !v)}>
                             {showConfirm ? '🙈' : '👁'}
                         </button>
                     </div>
+                    {fieldErrors.confirm && <p className={css.fieldError}>{fieldErrors.confirm}</p>}
                 </div>
 
-                {(localError || error) && <p className={css.error}>{localError || error}</p>}
+                {localError && <p className={css.error}>{localError}</p>}
 
                 <button className={css.submitBtn} onClick={handleSubmit} disabled={loading}>
                     {loading ? <span className={css.spinner}/> : 'Зареєструватись'}

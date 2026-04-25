@@ -184,27 +184,38 @@ const VenueCard: FC<IProps> = ({venueCard: vc}) => {
                     </div>
                 </div>
                 <div className={css.heroActions}>
-                    <button className={`${css.likeBtn} ${isLiked ? css.likeBtnActive : ''}`}
-                            onClick={handleLike} disabled={likeLoading}
-                            title={isLiked ? 'Прибрати лайк' : 'Подобається'}>
-                        👍 {likeCount > 0 ? likeCount : ''}
-                    </button>
-                    <button className={`${css.favBtn} ${isFav ? css.favActive : ''}`}
-                            onClick={handleFav} disabled={favLoading}
-                            title={isFav ? 'Видалити з улюблених' : 'Додати в улюблені'}>
-                        {isFav ? '♥' : '♡'}
-                    </button>
-                    <button className={css.pyachokBtn} onClick={() => setShowPyachok(true)}>
-                        🍺 Пиячок
-                    </button>
+                    <span title={!isAuth ? 'Увійдіть, щоб поставити лайк' : ''}>
+                        <button className={`${css.likeBtn} ${isLiked ? css.likeBtnActive : ''}`}
+                                onClick={isAuth ? handleLike : () => {}}
+                                disabled={likeLoading || !isAuth}
+                                title={isAuth ? (isLiked ? 'Прибрати лайк' : 'Подобається') : ''}>
+                            👍 {likeCount > 0 ? likeCount : ''}
+                        </button>
+                    </span>
+                    <span title={!isAuth ? 'Увійдіть, щоб додати в улюблені' : ''}>
+                        <button className={`${css.favBtn} ${isFav ? css.favActive : ''}`}
+                                onClick={isAuth ? handleFav : () => {}}
+                                disabled={favLoading || !isAuth}
+                                title={isAuth ? (isFav ? 'Видалити з улюблених' : 'Додати в улюблені') : ''}>
+                            {isFav ? '♥' : '♡'}
+                        </button>
+                    </span>
+                    {isAuth && (
+                        <button className={css.pyachokBtn} onClick={() => setShowPyachok(true)}
+                                title="Пиячок">
+                            🍺 Пиячок
+                        </button>
+                    )}
                     {isOwner && (
                         <a href={`/venues/${vc.id}/edit`} className={css.editBtn}>
                             ✏️ Редагувати
                         </a>
                     )}
-                    <button className={css.complaintBtn} onClick={() => setShowComplaint(true)} title="Поскаржитися">
-                        ⚠️
-                    </button>
+                    {isAuth && (
+                        <button className={css.complaintBtn} onClick={() => setShowComplaint(true)} title="Поскаржитися">
+                            ⚠️
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -286,24 +297,32 @@ const VenueCard: FC<IProps> = ({venueCard: vc}) => {
                             </div>
                         )}
                         <div className={css.ratingForm}>
-                            <p className={css.ratingFormLabel}>
-                                {ratingDone ? `✅ Ваша оцінка: ${userRating} / 10` : 'Поставте свою оцінку (1–10):'}
-                            </p>
-                            {!ratingDone && (
-                                <div className={css.ratingStars}>
-                                    {Array.from({length: 10}).map((_, i) => {
-                                        const val = i + 1;
-                                        const active = (ratingHover ?? userRating ?? 0) >= val;
-                                        return (
-                                            <span key={val}
-                                                  className={active ? css.rStarOn : css.rStarOff}
-                                                  onMouseEnter={() => setRatingHover(val)}
-                                                  onMouseLeave={() => setRatingHover(null)}
-                                                  onClick={() => handleRating(val)}>★</span>
-                                        );
-                                    })}
-                                    {ratingHover && <span className={css.ratingNum}>{ratingHover}</span>}
-                                </div>
+                            {isAuth ? (
+                                <>
+                                    <p className={css.ratingFormLabel}>
+                                        {ratingDone ? `✅ Ваша оцінка: ${userRating} / 10` : 'Поставте свою оцінку (1–10):'}
+                                    </p>
+                                    {!ratingDone && (
+                                        <div className={css.ratingStars}>
+                                            {Array.from({length: 10}).map((_, i) => {
+                                                const val = i + 1;
+                                                const active = (ratingHover ?? userRating ?? 0) >= val;
+                                                return (
+                                                    <span key={val}
+                                                          className={active ? css.rStarOn : css.rStarOff}
+                                                          onMouseEnter={() => setRatingHover(val)}
+                                                          onMouseLeave={() => setRatingHover(null)}
+                                                          onClick={() => handleRating(val)}>★</span>
+                                                );
+                                            })}
+                                            {ratingHover && <span className={css.ratingNum}>{ratingHover}</span>}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <p className={css.ratingFormLabel}>
+                                    <a href="/login" style={{color: 'rgba(193,138,102,0.96)', fontWeight: 700}}>Увійдіть</a>, щоб поставити оцінку
+                                </p>
                             )}
                         </div>
                     </section>

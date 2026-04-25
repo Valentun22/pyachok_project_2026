@@ -99,6 +99,7 @@ const urls = {
         markRead: (id: string) => `${baseUrl}/messages/${id}/read`,
         markAllRead: `${baseUrl}/messages/read-all`,
         delete: (id: string) => `${baseUrl}/messages/${id}`,
+        dialog: (userId: string) => `${baseUrl}/messages/dialog/${userId}`,
     },
     analytics: {
         viewsSummary: (venueId: string) => `${baseUrl}/venues/${venueId}/analytics/views/summary`,

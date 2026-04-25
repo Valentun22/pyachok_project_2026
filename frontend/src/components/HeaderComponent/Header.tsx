@@ -63,13 +63,17 @@ const Header = () => {
 
             <nav className={`${css.infoBlock} ${css.flex}`}>
                 {NAV_LINKS.map(({label, path, highlight}: any) => (
-                    <button
+                    <NavLink
                         key={path}
-                        className={css.btn2}
+                        to={path}
+                        end={path === '/'}
+                        className={({isActive}: {isActive: boolean}) =>
+                            [css.btn2, isActive ? css.btn2Active : ''].filter(Boolean).join(' ')
+                        }
                         style={highlight ? {background: 'rgba(193,138,102,0.96)', color: '#fff'} : undefined}
-                        onClick={() => navigate(path)}>
+                        onClick={() => setMenuOpen(false)}>
                         {label}
-                    </button>
+                    </NavLink>
                 ))}
             </nav>
 

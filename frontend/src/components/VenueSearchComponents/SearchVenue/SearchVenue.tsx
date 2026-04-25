@@ -6,15 +6,23 @@ import {IVenueSearchQuery, SortOrderEnum, VenueSortByEnum} from '../../../interf
 import css from './SearchVenue.module.css';
 import {SearchFilters} from "../SearchFilters/SearchFilters";
 import {VenueSearchCard} from "../VenueSearchCard/VenueSearchCard";
+import Pagination from '../../Pagination/Pagination';
+
+const LIMIT = 12;
 
 const SearchVenue = () => {
     const dispatch = useAppDispatch();
-    const [searchParams] = useSearchParams();
-    const {venues, total, offset, limit, query, loading, loadingMore, error} =
-        useAppSelector(state => state.venueSearch);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const {venues, total, query, loading, error} = useAppSelector(state => state.venueSearch);
 
+    const page = Number(searchParams.get('page') ?? 1);
     const [inputValue, setInputValue] = useState(query.search ?? '');
-    const hasMore = offset < total;
+
+    const setPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('page', String(p));
+        return n;
+    });
 
     useEffect(() => {
         const tagFromUrl = searchParams.get('tag');
@@ -24,9 +32,7 @@ const SearchVenue = () => {
             q.tag = tagFromUrl;
             setInputValue(tagFromUrl);
         }
-        if (cityFromUrl) {
-            q.city = cityFromUrl;
-        }
+        if (cityFromUrl) q.city = cityFromUrl;
         if (tagFromUrl || cityFromUrl) {
             dispatch(venueSearchActions.setQuery(q));
             dispatch(venueSearchActions.search(q));
@@ -36,11 +42,10 @@ const SearchVenue = () => {
     useEffect(() => {
         const timer = setTimeout(() => {
             if (inputValue.trim()) {
-                // Check if input matches a tag query (came from tag click)
                 const isTagSearch = query.tag === inputValue.trim();
                 const q = isTagSearch
-                    ? {...query, offset: 0}
-                    : {...query, search: inputValue.trim(), tag: undefined, offset: 0};
+                    ? {...query, offset: (page - 1) * LIMIT, limit: LIMIT}
+                    : {...query, search: inputValue.trim(), tag: undefined, offset: (page - 1) * LIMIT, limit: LIMIT};
                 dispatch(venueSearchActions.setQuery(q));
                 dispatch(venueSearchActions.search(q));
             } else if (!inputValue) {
@@ -48,21 +53,19 @@ const SearchVenue = () => {
             }
         }, 400);
         return () => clearTimeout(timer);
-    }, [inputValue]);
+    }, [inputValue, page]);
 
     const handleFiltersApply = useCallback((filters: IVenueSearchQuery) => {
-        const q = {...filters, search: inputValue || undefined, offset: 0, limit};
+        const q = {...filters, search: inputValue || undefined, offset: 0, limit: LIMIT};
         dispatch(venueSearchActions.setQuery(q));
         dispatch(venueSearchActions.search(q));
-    }, [dispatch, inputValue, limit]);
+        setPage(1);
+    }, [dispatch, inputValue]);
 
     const handleFiltersReset = () => {
         dispatch(venueSearchActions.resetSearch());
         setInputValue('');
-    };
-
-    const handleLoadMore = () => {
-        dispatch(venueSearchActions.loadMore({...query, offset, limit}));
+        setPage(1);
     };
 
     const defaultQuery: IVenueSearchQuery = {
@@ -86,16 +89,17 @@ const SearchVenue = () => {
                         type="text"
                         placeholder="Назва закладу, тег, місто..."
                         value={inputValue}
-                        onChange={e => setInputValue(e.target.value)}
+                        onChange={e => {
+                            setInputValue(e.target.value);
+                            setPage(1);
+                        }}
                         autoFocus
                     />
                     {inputValue && (
                         <button className={css.clearBtn} onClick={() => {
                             setInputValue('');
                             dispatch(venueSearchActions.resetSearch());
-                        }}>
-                            ✕
-                        </button>
+                        }}>✕</button>
                     )}
                 </div>
                 <SearchFilters query={defaultQuery} onApply={handleFiltersApply} onReset={handleFiltersReset}/>
@@ -107,37 +111,23 @@ const SearchVenue = () => {
 
             {loading && (
                 <div className={css.grid}>
-                    {Array.from({length: 8}).map((_, i) => (
-                        <div key={i} className={css.skeleton}/>
-                    ))}
+                    {Array.from({length: 8}).map((_, i) => <div key={i} className={css.skeleton}/>)}
                 </div>
             )}
 
-            {error && !loading && (
-                <div className={css.state}>
-                    <span>😕</span>
-                    <p>{error}</p>
-                </div>
-            )}
+            {error && !loading && <div className={css.state}><span>😕</span><p>{error}</p></div>}
 
             {!loading && !error && inputValue && venues.length === 0 && (
-                <div className={css.state}>
-                    <span>🔦</span>
-                    <p>За запитом <strong>«{inputValue}»</strong> нічого не знайдено</p>
-                </div>
+                <div className={css.state}><span>🔦</span><p>За запитом <strong>«{inputValue}»</strong> нічого не
+                    знайдено</p></div>
             )}
 
             {!loading && !error && !inputValue && !query.tag && !query.city && venues.length === 0 && (
-                <div className={css.state}>
-                    <span>🗺</span>
-                    <p>Введи назву закладу або застосуй фільтри</p>
-                </div>
+                <div className={css.state}><span>🗺</span><p>Введи назву закладу або застосуй фільтри</p></div>
             )}
+
             {!loading && !error && (query.tag || query.city) && venues.length === 0 && (
-                <div className={css.state}>
-                    <span>🔦</span>
-                    <p>За фільтрами нічого не знайдено</p>
-                </div>
+                <div className={css.state}><span>🔦</span><p>За фільтрами нічого не знайдено</p></div>
             )}
 
             {!loading && venues.length > 0 && (
@@ -145,17 +135,10 @@ const SearchVenue = () => {
                     <div className={css.grid}>
                         {venues.map(v => <VenueSearchCard key={v.id} venue={v}/>)}
                     </div>
-
-                    {hasMore && (
-                        <div className={css.loadMoreWrap}>
-                            <button className={css.loadMoreBtn} onClick={handleLoadMore} disabled={loadingMore}>
-                                {loadingMore
-                                    ? <span className={css.spinner}/>
-                                    : `Показати ще (${total - offset})`
-                                }
-                            </button>
-                        </div>
-                    )}
+                    <Pagination page={page} total={total} limit={LIMIT} onChange={p => {
+                        setPage(p);
+                        window.scrollTo(0, 0);
+                    }}/>
                 </>
             )}
         </div>

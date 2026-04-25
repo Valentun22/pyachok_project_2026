@@ -2,21 +2,10 @@ import {FC, useEffect, useState} from 'react';
 import {axiosInstance} from '../../../services/axiosInstance.service';
 import {urls} from '../../../constants/urls';
 import css from './VenueAnalytics.module.css';
+import {ITimePoint, ISummary} from '../../../interfaces/IVenueAnalyticsInterface';
 
 interface IProps {
     venueId: string;
-}
-
-interface ITimePoint {
-    bucket: string;
-    date?: string;
-    count: number;
-}
-
-interface ISummary {
-    total: number;
-    uniqueVisitors?: number;
-    avgPerDay?: number;
 }
 
 const VenueAnalytics: FC<IProps> = ({venueId}) => {

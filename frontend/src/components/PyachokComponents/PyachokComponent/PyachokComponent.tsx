@@ -1,10 +1,11 @@
 import {useEffect, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, useSearchParams} from 'react-router-dom';
 import css from './PyachokComponent.module.css';
 import {IPyachokItem, PyachokStatusEnum} from '../../../interfaces/IPyachokInterface';
 import {pyachokService} from '../../../services/pyachok.service';
 import {useAppSelector} from '../../../hooks/useReduxHooks';
 import img1 from '../../../img/img1.png';
+import Pagination from '../../Pagination/Pagination';
 
 const GENDER_LABELS: Record<string, string> = {any: 'Будь-яка', male: '👨 Чоловіча', female: '👩 Жіноча'};
 const PAYER_LABELS: Record<string, string> = {
@@ -51,60 +52,68 @@ const PyachokCard = ({item, onNavigate}: { item: IPyachokItem; onNavigate: (id: 
     </article>
 );
 
+const LIMIT = 12;
+
 const PyachokComponent = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {isAuth} = useAppSelector(state => state.auth);
-    const [viewTab, setViewTab] = useState<ViewTab>('feed');
+
+    const viewTab = (searchParams.get('ptab') ?? 'feed') as ViewTab;
+    const page = Number(searchParams.get('page') ?? 1);
+
+    const setViewTab = (tab: ViewTab) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('ptab', tab);
+        n.set('page', '1');
+        return n;
+    });
+
+    const setPage = (p: number) => {
+        setSearchParams(prev => { const n = new URLSearchParams(prev); n.set('page', String(p)); return n; });
+        window.scrollTo(0, 0);
+    };
+
     const [items, setItems] = useState<IPyachokItem[]>([]);
     const [myItems, setMyItems] = useState<IPyachokItem[]>([]);
     const [total, setTotal] = useState(0);
     const [myTotal, setMyTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [myLoading, setMyLoading] = useState(false);
-    const [page, setPage] = useState(1);
-    const [myPage, setMyPage] = useState(1);
-    const LIMIT = 12;
 
-    const loadFeed = async (p = 1) => {
+    const loadFeed = async (p: number) => {
         setLoading(true);
         try {
             const {data} = await pyachokService.getOpenFeed({limit: LIMIT, page: p});
             const list = (data as any).items ?? (data as any).data ?? [];
-            if (p === 1) setItems(list); else setItems(prev => [...prev, ...list]);
+            setItems(list);
             setTotal((data as any).total ?? 0);
-        } catch {
-        }
+        } catch {}
         setLoading(false);
     };
 
-    const loadMy = async (p = 1) => {
+    const loadMy = async (p: number) => {
         if (!isAuth) return;
         setMyLoading(true);
         try {
             const {data} = await pyachokService.getMyList({limit: LIMIT, page: p});
             const list = (data as any).items ?? (data as any).data ?? [];
-            if (p === 1) setMyItems(list); else setMyItems(prev => [...prev, ...list]);
+            setMyItems(list);
             setMyTotal((data as any).total ?? 0);
-        } catch {
-        }
+        } catch {}
         setMyLoading(false);
     };
 
     useEffect(() => {
-        loadFeed(1);
-        if (isAuth) loadMy(1);
-    }, []);
-    useEffect(() => {
-        if (viewTab === 'my' && isAuth) loadMy(1);
-    }, [viewTab, isAuth]);
+        if (viewTab === 'feed') loadFeed(page);
+        if (viewTab === 'my' && isAuth) loadMy(page);
+    }, [viewTab, page, isAuth]);
 
     const renderList = (
-        list: IPyachokItem[], isLoading: boolean, curTotal: number,
-        onMore: () => void, emptyText: string,
+        list: IPyachokItem[], isLoading: boolean, curTotal: number, emptyText: string,
     ) => (
         <>
-            {isLoading && <div className={css.grid}>{Array.from({length: 6}).map((_, i) => <div key={i}
-                                                                                                className={css.skeleton}/>)}</div>}
+            {isLoading && <div className={css.grid}>{Array.from({length: 6}).map((_, i) => <div key={i} className={css.skeleton}/>)}</div>}
             {!isLoading && list.length === 0 && (
                 <div className={css.empty}>
                     <span>🍻</span><p>{emptyText}</p>
@@ -114,14 +123,9 @@ const PyachokComponent = () => {
             {list.length > 0 && (
                 <>
                     <div className={css.grid}>
-                        {list.map(item => <PyachokCard key={item.id} item={item}
-                                                       onNavigate={id => navigate(`/venues/${id}`)}/>)}
+                        {list.map(item => <PyachokCard key={item.id} item={item} onNavigate={id => navigate(`/venues/${id}`)}/>)}
                     </div>
-                    {list.length < curTotal && !isLoading && (
-                        <div className={css.loadMoreWrap}>
-                            <button className={css.loadMoreBtn} onClick={onMore}>Завантажити ще</button>
-                        </div>
-                    )}
+                    <Pagination page={page} total={curTotal} limit={LIMIT} onChange={setPage}/>
                 </>
             )}
         </>
@@ -131,8 +135,7 @@ const PyachokComponent = () => {
         <div className={css.page}>
             <div className={css.hero}>
                 <img src={img1} alt="Logo"/>
-                <p className={css.heroSub}>Шукаєш компанію? Знайди людей, які хочуть провести час у барі чи
-                    ресторані</p>
+                <p className={css.heroSub}>Шукаєш компанію? Знайди людей, які хочуть провести час у барі чи ресторані</p>
                 <div className={css.heroBtns}>
                     <button className={css.heroBtn} onClick={() => navigate('/searchVenue')}>Знайти заклад</button>
                 </div>
@@ -150,20 +153,8 @@ const PyachokComponent = () => {
                         </button>
                     )}
                 </div>
-                {viewTab === 'feed' && renderList(items, loading, total,
-                    () => {
-                        const n = page + 1;
-                        setPage(n);
-                        loadFeed(n);
-                    },
-                    'Відкритих запитів поки немає. Знайди заклад і натисни «Пиячок»!')}
-                {viewTab === 'my' && renderList(myItems, myLoading, myTotal,
-                    () => {
-                        const n = myPage + 1;
-                        setMyPage(n);
-                        loadMy(n);
-                    },
-                    'Ти ще не створював запитів. Знайди заклад і натисни «Пиячок»!')}
+                {viewTab === 'feed' && renderList(items, loading, total, 'Відкритих запитів поки немає. Знайди заклад і натисни «Пиячок»!')}
+                {viewTab === 'my' && renderList(myItems, myLoading, myTotal, 'Ти ще не створював запитів. Знайди заклад і натисни «Пиячок»!')}
             </div>
         </div>
     );

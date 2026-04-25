@@ -4,6 +4,7 @@ import {IPyachokItem, PyachokStatusEnum} from '../../../interfaces/IPyachokInter
 import {PyachokModal} from '../PyachokModal/PyachokModal';
 import css from './VenuePyachokList.module.css';
 import {messageService} from "../../../services/massage.service";
+import {useAppSelector} from "../../../hooks/useReduxHooks";
 
 interface IProps {
     venueId: string;
@@ -39,6 +40,8 @@ const VenuePyachokList: FC<IProps> = ({venueId, venueName, isVenueOwner = false}
         }
     })();
 
+    const {isAuth} = useAppSelector(state => state.auth);
+
     const load = async () => {
         setLoading(true);
         try {
@@ -47,7 +50,7 @@ const VenuePyachokList: FC<IProps> = ({venueId, venueName, isVenueOwner = false}
             });
             setItems(data.items ?? data.data ?? []);
             setTotal(data.total ?? 0);
-        } catch { /* ignore */
+        } catch {
         }
         setLoading(false);
     };
@@ -98,9 +101,11 @@ const VenuePyachokList: FC<IProps> = ({venueId, venueName, isVenueOwner = false}
                     <h2 className={css.title}>🍺 Пиячок <span className={css.badge}>{total}</span></h2>
                     <p className={css.sub}>Відкриті запити на компанію в цьому закладі</p>
                 </div>
-                <button className={css.createBtn} onClick={() => setShowModal(true)}>
-                    + Свій запит
-                </button>
+                {isAuth && (
+                    <button className={css.createBtn} onClick={() => setShowModal(true)}>
+                        + Свій запит
+                    </button>
+                )}
             </div>
 
             {loading && (
@@ -113,9 +118,11 @@ const VenuePyachokList: FC<IProps> = ({venueId, venueName, isVenueOwner = false}
                 <div className={css.empty}>
                     <span>🍻</span>
                     <p>Відкритих запитів поки немає. Будьте першим!</p>
-                    <button className={css.createBtnEmpty} onClick={() => setShowModal(true)}>
-                        Створити запит
-                    </button>
+                    {isAuth && (
+                        <button className={css.createBtnEmpty} onClick={() => setShowModal(true)}>
+                            Створити запит
+                        </button>
+                    )}
                 </div>
             )}
 

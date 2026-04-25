@@ -54,7 +54,6 @@ const PyachokModal: FC<IProps> = ({venueId, venueName, onClose, editItem}) => {
     };
 
     const handleSubmit = async () => {
-        // Перевіряємо кожне поле окремо
         if (!dto.date) {
             setError('❌ Вкажіть дату зустрічі');
             return;
@@ -299,7 +298,7 @@ const PyachokModal: FC<IProps> = ({venueId, venueName, onClose, editItem}) => {
                 )}
             </div>
         </div>
-    , document.body);
+        , document.body);
 };
 
 export {PyachokModal};

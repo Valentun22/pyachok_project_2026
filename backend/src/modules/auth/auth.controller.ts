@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Post,
   Query,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -35,7 +36,11 @@ export class AuthController {
   @SkipAuth()
   @Post('sign-in')
   public async signIn(@Body() dto: SignInReqDto): Promise<AuthResDto> {
-    return await this.authService.signIn(dto);
+    try {
+      return await this.authService.signIn(dto);
+    } catch {
+      throw new UnauthorizedException();
+    }
   }
 
   @SkipAuth()
@@ -57,7 +62,7 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post('resend-verification')
   public async resendVerification(
-    @CurrentUser() userData: IUserData,
+      @CurrentUser() userData: IUserData,
   ): Promise<void> {
     await this.authService.resendVerificationEmail(userData.userId);
   }
@@ -67,7 +72,7 @@ export class AuthController {
   @SkipAuth()
   @Post('refresh')
   public async refresh(
-    @CurrentUser() userData: IUserData,
+      @CurrentUser() userData: IUserData,
   ): Promise<TokenPairResDto> {
     return await this.authService.refresh(userData);
   }
