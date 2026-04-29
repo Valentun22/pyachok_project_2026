@@ -672,32 +672,44 @@ const UsersTab = () => {
 
 const ComplaintsTab = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [items, setItems] = useState<IComplaint[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [offset, setOffset] = useState(0);
     const LIMIT = 20;
 
-    const load = async (off = 0) => {
+    const filterStatus = searchParams.get('cstatus') ?? 'all';
+    const setFilterStatus = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v === 'all' ? n.delete('cstatus') : n.set('cstatus', v);
+        n.delete('cpage');
+        return n;
+    });
+
+    const cPage = Number(searchParams.get('cpage') ?? 1);
+    const setCPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('cpage', String(p));
+        return n;
+    });
+
+    const load = async (p = cPage) => {
         setLoading(true);
-        const params: any = {limit: LIMIT, offset: off};
+        const params: any = {limit: LIMIT, offset: (p - 1) * LIMIT};
         if (filterStatus !== 'all') params.status = filterStatus;
         try {
             const {data} = await adminService.getComplaints(params);
             const list = data.data ?? data ?? [];
-            if (off === 0) setItems(list);
-            else setItems(p => [...p, ...list]);
+            setItems(list);
             setTotal(data.total ?? list.length);
-            setOffset(off + list.length);
         } catch {
         }
         setLoading(false);
     };
 
     useEffect(() => {
-        void load(0);
-    }, [filterStatus]);
+        void load(cPage);
+    }, [filterStatus, cPage]);
 
     const handleStatus = async (id: string, status: string) => {
         await adminService.updateComplaintStatus(id, status).catch(() => {
@@ -708,10 +720,7 @@ const ComplaintsTab = () => {
     return (
         <div>
             <div className={css.toolbar}>
-                <select className={css.filter} value={filterStatus} onChange={e => {
-                    setFilterStatus(e.target.value);
-                    setOffset(0);
-                }}>
+                <select className={css.filter} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
                     <option value="all">Всі статуси</option>
                     {COMPLAINT_STATUSES.map(s => (
                         <option key={s} value={s}>{STATUS_LABELS[s]}</option>
@@ -767,13 +776,10 @@ const ComplaintsTab = () => {
                 <div className={css.emptyState}><span>📭</span><p>Скарг немає</p></div>
             )}
 
-            {!loading && items.length < total && (
-                <div className={css.loadMoreRow}>
-                    <button className={css.loadMoreBtn} onClick={() => load(offset)}>
-                        Ще ({total - items.length})
-                    </button>
-                </div>
-            )}
+            {!loading && <Pagination page={cPage} total={total} limit={LIMIT} onChange={p => {
+                setCPage(p);
+                window.scrollTo(0, 0);
+            }}/>}
         </div>
     );
 };
@@ -1044,31 +1050,44 @@ const TopTab = () => {
 };
 
 const CommentsTab = () => {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [items, setItems] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [offset, setOffset] = useState(0);
-    const [search, setSearch] = useState('');
     const [editId, setEditId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState({title: '', body: '', rating: 1});
     const LIMIT = 20;
 
-    const load = async (off = 0, q = search) => {
+    const search = searchParams.get('csearch') ?? '';
+    const setSearch = (v: string) => setSearchParams(p => {
+        const n = new URLSearchParams(p);
+        v ? n.set('csearch', v) : n.delete('csearch');
+        n.delete('cmpage');
+        return n;
+    });
+
+    const cmPage = Number(searchParams.get('cmpage') ?? 1);
+    const setCmPage = (p: number) => setSearchParams(prev => {
+        const n = new URLSearchParams(prev);
+        n.set('cmpage', String(p));
+        return n;
+    });
+
+    const load = async (p = cmPage) => {
         setLoading(true);
         try {
-            const {data} = await adminService.getComments({limit: LIMIT, offset: off, search: q || undefined});
+            const {data} = await adminService.getComments({limit: LIMIT, offset: (p - 1) * LIMIT, search: search || undefined});
             const list = (data as any).data ?? data ?? [];
-            if (off === 0) setItems(list); else setItems(p => [...p, ...list]);
+            setItems(list);
             setTotal((data as any).total ?? list.length);
-            setOffset(off + list.length);
         } catch {
         }
         setLoading(false);
     };
 
     useEffect(() => {
-        load(0, search);
-    }, [search]);
+        void load(cmPage);
+    }, [search, cmPage]);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm('Видалити коментар?')) return;
@@ -1095,10 +1114,7 @@ const CommentsTab = () => {
         <div>
             <div className={css.toolbar}>
                 <input className={css.searchInput} placeholder="🔍 Пошук за текстом, автором, закладом..."
-                       value={search} onChange={e => {
-                    setSearch(e.target.value);
-                    setOffset(0);
-                }}/>
+                       value={search} onChange={e => setSearch(e.target.value)}/>
                 <span className={css.totalCount}>Всього: {total}</span>
             </div>
             {loading && <div className={css.loadingRow}>Завантаження...</div>}
@@ -1154,12 +1170,10 @@ const CommentsTab = () => {
                     </tbody>
                 </table>
             </div>
-            {!loading && items.length < total && (
-                <div className={css.loadMoreRow}>
-                    <button className={css.loadMoreBtn} onClick={() => load(offset)}>Ще ({total - items.length})
-                    </button>
-                </div>
-            )}
+            {!loading && <Pagination page={cmPage} total={total} limit={LIMIT} onChange={p => {
+                setCmPage(p);
+                window.scrollTo(0, 0);
+            }}/>}
         </div>
     );
 };

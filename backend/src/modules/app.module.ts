@@ -35,7 +35,7 @@ import { VenueModule } from './venue/venue.module';
     ConfigModule.forRoot({
       load: [configuration],
       isGlobal: true,
-      envFilePath: path.resolve(process.cwd(), 'environments', 'local.env'),
+      envFilePath: path.resolve(process.cwd(), 'environments', `${process.env.NODE_ENV ?? 'local'}.env`),
     }),
     PostgresModule,
     RedisModule,

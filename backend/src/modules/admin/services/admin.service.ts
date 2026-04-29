@@ -92,7 +92,7 @@ export class AdminService {
     qb.andWhere('venue.isModerated = false');
 
     if (query.search) {
-      qb.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qb.andWhere('venue.name ILIKE :search');
       qb.setParameter('search', `%${query.search}%`);
     }
 
@@ -156,7 +156,7 @@ export class AdminService {
     }
 
     if (query.search) {
-      qb.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qb.andWhere('venue.name ILIKE :search');
       qb.setParameter('search', `%${query.search}%`);
     }
 
@@ -381,128 +381,128 @@ export class AdminService {
 
     await this.userRepository.manager.query(
       `DELETE
-       FROM likes
-       WHERE user_id = $1`,
+             FROM likes
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM rating_venue
-       WHERE user_id = $1`,
+             FROM rating_venue
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM comments
-       WHERE user_id = $1`,
+             FROM comments
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM refresh_tokens
-       WHERE user_id = $1`,
+             FROM refresh_tokens
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM complaints
-       WHERE user_id = $1`,
+             FROM complaints
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM follows
-       WHERE follower_id = $1
-          OR following_id = $2`,
+             FROM follows
+             WHERE follower_id = $1
+                OR following_id = $2`,
       [userId, userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM user_favorite_venues
-       WHERE user_id = $1`,
+             FROM user_favorite_venues
+             WHERE user_id = $1`,
       [userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM messages
-       WHERE sender_id = $1
-          OR recipient_id = $2`,
+             FROM messages
+             WHERE sender_id = $1
+                OR recipient_id = $2`,
       [userId, userId],
     );
     await this.userRepository.manager.query(
       `DELETE
-       FROM pyachok_request
-       WHERE user_id = $1`,
+             FROM pyachok_request
+             WHERE user_id = $1`,
       [userId],
     );
 
     const venues = await this.userRepository.manager.query(
       `SELECT id
-       FROM venues
-       WHERE user_id = $1`,
+             FROM venues
+             WHERE user_id = $1`,
       [userId],
     );
     for (const venue of venues) {
       const vid = venue.id;
       await this.userRepository.manager.query(
         `DELETE
-         FROM likes
-         WHERE venue_id = $1`,
+                 FROM likes
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM rating_venue
-         WHERE venue_id = $1`,
+                 FROM rating_venue
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM comments
-         WHERE venue_id = $1`,
+                 FROM comments
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM complaints
-         WHERE venue_id = $1`,
+                 FROM complaints
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM user_favorite_venues
-         WHERE venue_id = $1`,
+                 FROM user_favorite_venues
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM pyachok_request
-         WHERE venue_id = $1`,
+                 FROM pyachok_request
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM news
-         WHERE venue_id = $1`,
+                 FROM news
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM venue_views
-         WHERE venue_id = $1`,
+                 FROM venue_views
+                 WHERE venue_id = $1`,
         [vid],
       );
       await this.userRepository.manager.query(
         `DELETE
-         FROM top_category_venues
-         WHERE venue_id = $1`,
+                 FROM top_category_venues
+                 WHERE venue_id = $1`,
         [vid],
       );
     }
     await this.userRepository.manager.query(
       `DELETE
-       FROM venues
-       WHERE user_id = $1`,
+             FROM venues
+             WHERE user_id = $1`,
       [userId],
     );
 

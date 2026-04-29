@@ -105,23 +105,26 @@ const Login = () => {
         <div className={css.page}>
             <div className={css.card}>
                 <button className={css.closeBtn} onClick={() => navigate(-1)} aria-label="Закрити">✕</button>
-                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
-                    ← Назад
-                </button>
                 <h1 className={css.title}>Вхід</h1>
                 <p className={css.sub}>Раді бачити тебе знову!</p>
 
                 <div className={css.field}>
                     <label className={css.label}>Email</label>
                     <input className={css.input} type="email" placeholder="your@email.com"
-                           value={form.email} onChange={e => { set('email', e.target.value); setFieldErrors(p => ({...p, email: ''})); }}/>
+                           value={form.email} onChange={e => {
+                        set('email', e.target.value);
+                        setFieldErrors(p => ({...p, email: ''}));
+                    }}/>
                     {fieldErrors.email && <p className={css.fieldError}>{fieldErrors.email}</p>}
                 </div>
                 <div className={css.field}>
                     <label className={css.label}>Пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showPwd ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.password} onChange={e => { set('password', e.target.value); setFieldErrors(p => ({...p, password: ''})); }}
+                               value={form.password} onChange={e => {
+                            set('password', e.target.value);
+                            setFieldErrors(p => ({...p, password: ''}));
+                        }}
                                onKeyDown={e => e.key === 'Enter' && handleSubmit()}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowPwd(v => !v)}>
                             {showPwd ? '🙈' : '👁'}
@@ -162,6 +165,10 @@ const Login = () => {
                         </div>
                     </>
                 )}
+
+                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
+                    ← Назад
+                </button>
             </div>
         </div>
     );

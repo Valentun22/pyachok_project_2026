@@ -149,9 +149,7 @@ const RegisterUser = () => {
         <div className={css.page}>
             <div className={css.card}>
                 <button className={css.closeBtn} onClick={() => navigate(-1)} aria-label="Закрити">✕</button>
-                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
-                    ← Назад
-                </button>
+
                 <h1 className={css.title}>Реєстрація</h1>
                 <p className={css.sub}>Приєднуйся до спільноти!</p>
 
@@ -163,7 +161,10 @@ const RegisterUser = () => {
                         <label className={css.label}>{label}</label>
                         <input className={css.input} type={type} placeholder={ph}
                                value={(form as any)[key]}
-                               onChange={e => { set(key, e.target.value); setFieldErrors(p => ({...p, [key]: ''})); }}/>
+                               onChange={e => {
+                                   set(key, e.target.value);
+                                   setFieldErrors(p => ({...p, [key]: ''}));
+                               }}/>
                         {(fieldErrors as any)[key] && <p className={css.fieldError}>{(fieldErrors as any)[key]}</p>}
                     </div>
                 ))}
@@ -172,7 +173,10 @@ const RegisterUser = () => {
                     <label className={css.label}>Пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showPwd ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.password} onChange={e => { set('password', e.target.value); setFieldErrors(p => ({...p, password: ''})); }}/>
+                               value={form.password} onChange={e => {
+                            set('password', e.target.value);
+                            setFieldErrors(p => ({...p, password: ''}));
+                        }}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowPwd(v => !v)}>
                             {showPwd ? '🙈' : '👁'}
                         </button>
@@ -187,7 +191,10 @@ const RegisterUser = () => {
                     <label className={css.label}>Підтвердіть пароль</label>
                     <div className={css.pwdWrap}>
                         <input className={css.input} type={showConfirm ? 'text' : 'password'} placeholder="••••••••"
-                               value={form.confirm} onChange={e => { set('confirm', e.target.value); setFieldErrors(p => ({...p, confirm: ''})); }}
+                               value={form.confirm} onChange={e => {
+                            set('confirm', e.target.value);
+                            setFieldErrors(p => ({...p, confirm: ''}));
+                        }}
                                onKeyDown={e => e.key === 'Enter' && handleSubmit()}/>
                         <button type="button" className={css.eyeBtn} onClick={() => setShowConfirm(v => !v)}>
                             {showConfirm ? '🙈' : '👁'}
@@ -230,6 +237,9 @@ const RegisterUser = () => {
                         </div>
                     </>
                 )}
+                <button className={css.backBtn} onClick={() => navigate(-1)} aria-label="Назад">
+                    ← Назад
+                </button>
             </div>
         </div>
     );

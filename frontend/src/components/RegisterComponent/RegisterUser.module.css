@@ -311,10 +311,11 @@
 }
 
 .backBtn {
+    margin-top: 18px;
     background: none;
     border: none;
     color: rgba(193, 138, 102, 0.96);
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
     cursor: pointer;
     padding: 0;
@@ -324,7 +325,7 @@
 }
 
 .backBtn:hover {
-    opacity: 0.75;
+    color: rgba(135, 73, 33, 0.91);
 }
 
 .fieldError {

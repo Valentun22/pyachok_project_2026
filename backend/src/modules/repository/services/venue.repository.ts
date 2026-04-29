@@ -71,7 +71,7 @@ export class VenueRepository extends Repository<VenueEntity> {
     qb.addSelect(`(${likesCountSub})`, 'likesCount');
 
     if (query.search) {
-      qb.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qb.andWhere('venue.name ILIKE :search');
       qb.setParameter('search', `%${query.search}%`);
     }
 
@@ -151,7 +151,7 @@ export class VenueRepository extends Repository<VenueEntity> {
       qbCount.andWhere('venue.isActive = true');
     }
     if (query.search) {
-      qbCount.andWhere('CONCAT(venue.name, venue.description) ILIKE :search');
+      qbCount.andWhere('venue.name ILIKE :search');
       qbCount.setParameter('search', `%${query.search}%`);
     }
     if (query.city) {
